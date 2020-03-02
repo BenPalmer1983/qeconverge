@@ -1,0 +1,17 @@
+#
+#
+#
+#
+
+
+template file="alfcc.in"
+converge force=1.0E-5 force_units=RY/BOHR energy=5.0E-7 energy_units=ry
+units length=ang energy=ry
+ecut2d run=True wfc1=25 wfc2=100 wcf3=5 rho1=100 rho2=300 rho3=20
+
+ecutconv run=True wfc_min=25 wfc_inc=5 wfc_dec=1 wfc_max=100 rho_dec=5 minwfcrhoratio=2.0 kpointstype="automatic" kpointsval="5 5 5 1 1 1"
+configecut type=bcc size=1 alat=4.04 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 rand=0.01,0
+
+kconv run=True k_min=3 k_inc=2 k_max=7 k_type=automatic smearing=0.001,0.002,0.005,0.007,0.008,0.01,0.02,0.03,0.04,0.05
+configkpoint type=fcc size=1 alat=4.04 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 rand=0.01,0 
+

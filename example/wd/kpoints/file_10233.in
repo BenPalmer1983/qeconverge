@@ -1,0 +1,83 @@
+! Edited 14:21   25/10/2019
+&CONTROL 
+calculation = "scf", 
+disk_io = 'low', 
+etot_conv_thr = 1.0E-4, 
+forc_conv_thr = 1.0D-3, 
+nstep = 40, 
+outdir = "/opt/scratch", 
+prefix = "fe_scf_fcc_2", 
+pseudo_dir = "/opt/pp", 
+restart_mode = 'from_scratch', 
+tprnfor = .true., 
+tstress = .true., 
+/ 
+&SYSTEM 
+celldm(1) = 8.08, 
+degauss = 0.005, 
+ecutrho = 200.0, 
+ecutwfc = 66.0, 
+ibrav = 0, 
+nat = 32, 
+nspin = 1, 
+ntyp = 1, 
+occupations = 'smearing', 
+smearing = 'mv', 
+starting_magnetization(1) = 0, 
+/ 
+&ELECTRONS 
+conv_thr = 1.0D-6, 
+diagonalization = 'david', 
+mixing_beta = 1.0000000E-01, 
+mixing_mode = 'TF', 
+mixing_ndim = 10, 
+/ 
+&IONS 
+ion_dynamics = 'bfgs', 
+/ 
+&CELL 
+cell_dynamics = 'bfgs', 
+cell_factor = 2.0, 
+press = 0.0, 
+/ 
+ATOMIC_SPECIES 
+Al 26.982 Al.pbe-nl-kjpaw_psl.1.0.0.UPF 
+ATOMIC_POSITIONS crystal
+Al   -6.18e-05   1.8e-05   0.0001286   
+Al   0.2501504   0.2496409   0.0001329   
+Al   0.2498245   5.76e-05   0.2505585   
+Al   -3.78e-05   0.2504134   0.2503472   
+Al   0.0004835   0.0004765   0.4997751   
+Al   0.2502257   0.2496836   0.5000068   
+Al   0.2500525   0.0002908   0.7497884   
+Al   0.0001038   0.2502148   0.7503971   
+Al   0.0004488   0.5002037   -2.92e-05   
+Al   0.2502638   0.750333   0.0007661   
+Al   0.2503574   0.5002057   0.2504745   
+Al   7.25e-05   0.7500861   0.2500479   
+Al   0.0002082   0.5002952   0.5001871   
+Al   0.249932   0.7501195   0.4997555   
+Al   0.2506361   0.4996019   0.7494255   
+Al   -0.0006199   0.7494434   0.749987   
+Al   0.500385   -0.0001898   -7.32e-05   
+Al   0.7498343   0.2501778   -0.0004407   
+Al   0.7493109   -0.0001812   0.2501458   
+Al   0.499953   0.249927   0.2496819   
+Al   0.4998509   0.0005536   0.4999482   
+Al   0.7501292   0.2494251   0.4999098   
+Al   0.7500676   -0.0001298   0.7500485   
+Al   0.5000215   0.2497853   0.7499902   
+Al   0.4997214   0.5002185   -0.0004144   
+Al   0.7495697   0.7501849   0.0005172   
+Al   0.7501903   0.4996254   0.2498983   
+Al   0.5001659   0.7496046   0.2503955   
+Al   0.4993878   0.5001941   0.5000764   
+Al   0.7503133   0.7499759   0.4997253   
+Al   0.7499001   0.5000179   0.7502634   
+Al   0.5000268   0.7499029   0.7498445   
+K_POINTS automatic
+3 3 3 1 1 1 
+CELL_PARAMETERS alat
+1.0 0.0 0.0 
+0.0 1.0 0.0 
+0.0 0.0 1.0

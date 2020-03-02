@@ -1,0 +1,1 @@
+ecutwfc: 50.0ecutrho: 100.0
