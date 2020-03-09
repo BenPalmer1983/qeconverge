@@ -1,66 +1,89 @@
+######################################################
+#  Ben Palmer University of Birmingham 2020
+#  Free to use
+######################################################
 
 class read_config:
   
   @staticmethod
   def read_file(file_path):
+  
+    # Input dictionary
     input = {}
+  
+    # READ DATA
+    d = []
     fh = open(file_path, 'r')
     for line in fh:
-      input = read_config.read_line(input, line)
+      line = line.strip()
+      if(len(line) > 0 and line[0] != "#"):
+        d.append(line)      
     fh.close()
-    return input
     
-  @staticmethod
-  def read_line(input, line):
-    line = line.strip()
-    if(len(line) > 0 and line[0] != "#"):
-      cmd, data = read_config.get_fields_dict(line)
-      if(cmd not in input.keys()):
-        input[cmd] = []
-      input[cmd].append(data)
-    return input
+    # Count commands
+    commands = {}
+    for line in d:
+      fields = read_config.split_by(line, ' ')
+      c = fields[0].lower()
+      if(c in commands.keys()):
+        commands[c] = commands[c] + 1
+      else:
+        commands[c] = 1
         
-  @staticmethod  
-  def get_fields_dict(line): 
-    fields = read_config.split_by(line, ' ')    
-    dict = {}    
-    dict['COMMAND'] = fields[0]
+    # Prepare input dictionary    
+    for k in commands.keys():
+      if(commands[k] == 1):
+        input[k] = None
+      else:
+        input[k] = []
     
-    for field in fields:
-      f = field.split("=")
-      if(len(f) == 2):
-        fb = read_config.split_by(f[1], ',')
-        if(len(fb) == 1):
-          dict[f[0].lower()] = [f[1]]
-        elif(len(fb) > 1):
-          dict[f[0].lower()] = fb
-    
-    return fields[0], dict
-    
-  @staticmethod        
-  def get(data, c1, c2, n1=0, n2=0):
-    if(c1 not in data.keys()):
-      return None
-    c1_list = data[c1]
-    if(n1>=len(c1_list)):
-      return ''
-    if(c2 not in data[c1][n1].keys()):
-      return None
-    c2_list = data[c1][n1][c2]
-    if(n2>=len(c2_list)):
-      return ''
-    return data[c1][n1][c2][n2]
+    # Read Data into input
+    for line in d:
+      fields = read_config.split_by(line, ' ')
+      fkey = fields[0].lower()
+      
+      fd_size = {}
+      for i in range(1, len(fields)):
+        f = fields[i]
+        fs = f.split("=")
+        fc = fs[0].lower()
+        if(fc in fd_size.keys()):
+          fd_size[fc] = fd_size[fc] + 1
+        else:
+          fd_size[fc] = 1
+          
+      # Prepare dictionary   
+      fd = {} 
+      for k in fd_size.keys():
+        if(fd_size[k] == 1):
+          fd[k] = None
+        else:
+          fd[k] = []        
+        
+      for i in range(1, len(fields)):
+        f = fields[i]
+        fs = f.split("=")     
+        fc = fs[0].lower()        
+        fs = read_config.split_by(fs[1], ',')         
+        fs = read_config.store(fs)
+        
+        if(fd_size[fc] == 1):
+          if(len(fs) == 1):
+            fd[fc] = read_config.store(fs[0])
+          else:
+            fd[fc] = read_config.store(fs)
+        else:
+          if(len(fs) == 1):
+            fd[fc].append(read_config.store(fs[0]))
+          else:
+            fd[fc].append(read_config.store(fs))
+            
+      if(commands[fkey] == 1):
+        input[fkey] = fd
+      else:
+        input[fkey].append(fd)  
 
-  @staticmethod        
-  def get_list(data, c1, c2, n1=0):
-    if(c1 not in data.keys()):
-      return None
-    c1_list = data[c1]
-    if(n1>=len(c1_list)):
-      return ''
-    if(c2 not in data[c1][n1].keys()):
-      return None
-    return data[c1][n1][c2]
+    return input
         
         
     
@@ -93,3 +116,26 @@ class read_config:
       fields.append(temp_line)
     
     return fields
+    
+    
+  @staticmethod
+  def store(inp):  
+    if(isinstance(inp, list)):
+      for i in range(len(inp)):
+        try:
+          if('.' in inp[i]  or 'e' in inp[i]):
+            inp[i] = float(inp[i])
+          else:
+            inp[i] = int(inp[i])
+        except:
+          pass
+    else:
+      try:
+        if('.' in inp or 'e' in inp):
+          inp = float(inp)
+        else:
+          inp = int(inp)
+      except:
+        pass
+    return inp
+      

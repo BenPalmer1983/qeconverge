@@ -1,0 +1,22 @@
+####################################################################
+                              LOG FILE                              
+####################################################################
+
+21:04   08/03/2020
+
+
+0.068:      Running
+0.102:      Config file: config.in
+0.1364:     Length units: BOHR
+0.1699:     Energy units: RY
+0.2038:     Energy convergence: 5e-07 RY
+0.5592:     Force convergence: 1e-05
+0.5931:     Energy convergence: 5e-07 RY
+0.7388:     Template file loaded
+0.7728:     wd/template/input_template.in
+0.9296:     Template k-points file loaded
+0.9636:     wd/template/input_template_k.in
+1.1333:     Cache used /opt/pwscf_cache/8fe3bba2bdd996a92f0d5073db93d17fc852e2498283aef2f40a4c5009d5f3374952acab9e8e8ab1c0c134e87cf357b6d6c8fbf101a140aa9d8ae0f13cb1ec17.out
+1.382:      Cache used /opt/pwscf_cache/0e1b4103b6e8b462f217f5f1771e7ead6236193a8d05ed03428ecba99515f66d35b078521f9ca86f586004cd176eab922f94d59273dadc1520ddf596082f38fc.out
+1.6305:     Cache used /opt/pwscf_cache/db4286682773e548a0572d598fa76220197a2252b43ba9eec9c1d5e8061ebee20ca04a145fa7501aa46019a838d2c16989de3f30cf829f791b2cb568d724f7c8.out
+1.903:      Cache used /opt/pwscf_cache/73e9b38a112c190b19cca2c18248b2180e6c35a161a96bdcd0ffc740ca48fef51278a303587ce6ec42468f2c389ab95a53e76552ebb54587b4f9ec58cd93ec2e.out

@@ -401,7 +401,7 @@ class pwscf_input:
 # MAKE input file
 #################################
 
-  def make(self, rounding=None):
+  def make(self):
   
     now = datetime.datetime.now()
     time_now = str(now.hour) + ":" + str(now.minute) + "   " + str(now.day) + "/" + str(now.month) + "/" + str(now.year)
@@ -461,13 +461,8 @@ class pwscf_input:
       #  file += position[1] + "\n"
       #  header = 2
       elif(header == 1):  
-        j = 0
         for field in position:
-          j = j + 1
-          if(rounding == None or j == 1):
-            file += field + "   "            
-          else:
-            file += str(round(float(field), int(rounding))) + "   "
+          file += field + "   "
         file += "\n"
 
     # K_POINTS
@@ -512,9 +507,9 @@ class pwscf_input:
 #  Save, Save/Load Original
 ############################    
     
-  def save(self, file=None, dir=None, rounding=None):
+  def save(self, file=None, dir=None):
     # Build latest version of file
-    self.make(rounding)
+    self.make()
     
     if(file == None):
       file = self.file_name
@@ -582,19 +577,14 @@ class pwscf_input:
         return True
     return False
 
-  def set_scratch_dir(self, scratch_dir = None):
+  def set_dirs(self, scratch_dir = None, pp_dir = None):
     if(scratch_dir != None):
       self.scratch_dir = scratch_dir
-    self.control['outdir'] = '"' + self.scratch_dir + '"'
-
-  def set_pp_dir(self, pp_dir = None):
     if(pp_dir != None):
-      self.pp_dir = pp_dir
+      self.scratch_dir = pp_dir
+   
+    self.control['outdir'] = '"' + self.scratch_dir + '"'
     self.control['pseudo_dir'] = '"' + self.pp_dir + '"'
-
-  def set_dirs(self, scratch_dir = None, pp_dir = None):
-    self.set_scratch_dir(scratch_dir)
-    self.set_pp_dir(pp_dir)
 
   def set_prefix(self, pin = None):    
     if(pin == None):
@@ -700,12 +690,6 @@ class pwscf_input:
   # K-Points
   ####################
   def set_k_points(self, k_points_type, points_list):
-    if(type(points_list) == list):
-      for i in range(len(points_list)):
-        points_list[i] = str(points_list[i])
-    if(type(points_list) == str):
-      points_list = pwscf_input.clean(points_list)
-      points_list = points_list.split(" ")
     self.k_points = []
     self.k_points.append(k_points_type)
     self.k_points.append(points_list)
@@ -735,12 +719,12 @@ class pwscf_input:
     type = type.upper()
     result = {"CrystalAtoms": 0, "TotalAtoms": 0}
     
-    # FCC
-    if(type == "FCC"):
+    # SC
+    if(type == "SC"):
       labels = []
       for row in self.atomic_species:
         labels.append(row[0])
-      atoms, c_atoms, n_atoms = pwscf_standard.fcc(labels,size) 
+      atoms, c_atoms, n_atoms = pwscf_standard.sc(labels,size) 
       self.atomic_positions = atoms
       self.system['nat'] = str(len(self.atomic_positions) - 1)
     
@@ -750,6 +734,15 @@ class pwscf_input:
       for row in self.atomic_species:
         labels.append(row[0])
       atoms, c_atoms, n_atoms = pwscf_standard.bcc(labels,size) 
+      self.atomic_positions = atoms
+      self.system['nat'] = str(len(self.atomic_positions) - 1)
+    
+    # FCC
+    if(type == "FCC"):
+      labels = []
+      for row in self.atomic_species:
+        labels.append(row[0])
+      atoms, c_atoms, n_atoms = pwscf_standard.fcc(labels,size) 
       self.atomic_positions = atoms
       self.system['nat'] = str(len(self.atomic_positions) - 1)
     
@@ -804,8 +797,6 @@ class pwscf_input:
   
 
   def rand_vary(self, amount= 0.01, rand_seed=0):
-    amount = float(amount)
-    rand_seed = int(rand_seed)
     if(rand_seed == 1 and self.rand_seed_set == 0):
       self.rand_seed_set = 1
       self.rand.randomSeed()
@@ -1198,6 +1189,37 @@ class pwscf_input:
 class pwscf_standard:
 
   @staticmethod
+  def sc(label, size=1):
+    c_atoms = 4
+    n_atoms = c_atoms * size**3
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    for x in range(size):
+      for y in range(size):
+        for z in range(size):
+          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)]]
+          for i in range(len(coords)):
+            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
+    return atoms, c_atoms, n_atoms   
+
+  @staticmethod
+  def bcc(label, size=1):
+    c_atoms = 4
+    n_atoms = c_atoms * size**3
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    for x in range(size):
+      for y in range(size):
+        for z in range(size):
+          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)],
+                    [str((x+0.5)/size), str((y+0.5)/size), str((z+0.5)/size)]]
+          for i in range(len(coords)):
+            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
+    return atoms, c_atoms, n_atoms    
+
+  @staticmethod
   def fcc(label, size=1):
     c_atoms = 4
     n_atoms = c_atoms * size**3
@@ -1213,23 +1235,7 @@ class pwscf_standard:
                     [str((x+0.0)/size), str((y+0.5)/size), str((z+0.5)/size)]]
           for i in range(len(coords)):
             atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
-    return atoms, c_atoms, n_atoms     
-
-  @staticmethod
-  def bcc(label, size=1):
-    c_atoms = 2
-    n_atoms = c_atoms * size**3
-    if(not isinstance(label, (list,))):
-      label = [label]
-    atoms = ['crystal']
-    for x in range(size):
-      for y in range(size):
-        for z in range(size):
-          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)],
-                    [str((x+0.5)/size), str((y+0.5)/size), str((z+0.5)/size)]]
-          for i in range(len(coords)):
-            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
-    return atoms, c_atoms, n_atoms    
+    return atoms, c_atoms, n_atoms      
 
   @staticmethod
   def isolated(label, size=1):   

@@ -52,7 +52,13 @@ class units:
     'EV/ANG3': 6.241E-12
     }
     
-    unit_list = [length, energy, force, velocity, pressure]
+    # CHARGE DENSITY (UNIT CHARGE PER VOLUME - ANG^3)
+    charge_density = {
+    'ANG-3': 1.0,
+    'BOHR-3': 0.14812,    
+    }
+    
+    unit_list = [length, energy, force, velocity, pressure, charge_density]
     
     for l in unit_list:
       if(conv_from in l.keys() and conv_to in l.keys()):
