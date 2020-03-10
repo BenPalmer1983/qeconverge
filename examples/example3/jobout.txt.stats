@@ -1,0 +1,16 @@
++--------------------------------------------------------------------------+
+| Job on the BlueBEAR cluster:
+| Starting at Mon Mar  9 06:42:45 2020 for bxp912(5629)
+| Identity jobid 9982300 jobname pwaleos
+| Running against project readmsd02 and in partition broadwell-shared
+| Requested cpu=20,mem=80G,node=1,billing=20 - 06:00:00 walltime
+| Assigned to nodes bber0501u39a
+| Command /rds/homes/b/bxp912/jobs/20200309_al_conv_fcc/batch.sh
+| WorkDir /rds/homes/b/bxp912/jobs/20200309_al_conv_fcc
++--------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+| Finished at Mon Mar  9 09:08:07 2020 for bxp912(5629) on the BlueBEAR Cluster
+| Required (1-23:35:24 cputime, 5213216K memory used) - 02:25:22 walltime
+| JobState COMPLETING - Reason None
+| Exitcode 0:0
++--------------------------------------------------------------------------+

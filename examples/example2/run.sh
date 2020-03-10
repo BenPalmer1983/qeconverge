@@ -11,4 +11,5 @@ export PWSCF_CACHE=/opt/pwscf_cache
 export PWSCF_BIN=/opt/qe/bin/pw.x
 
 
-python3 pwscf_converge.py config.in
+python3 qeconverge.py input.in
+
