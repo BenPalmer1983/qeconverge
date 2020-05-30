@@ -12,6 +12,9 @@ class globals:
          'kpoints': 'wd/kpoints',
          'runpwscf': 'wd/runpwscf',
          'plots': 'wd/plots',
+         'plots_eps': 'wd/plots/eps',
+         'plots_eps_small': 'wd/plots/eps_small',
+         'plots_svg': 'wd/plots/svg',
          'csv': 'wd/csv',  
          'logs': 'wd/logs',  
          }
@@ -88,6 +91,7 @@ class globals:
          
          
   ecut2d = {       
+           'run': True,
            'wfc_units': 'RY',
            'rho_units': 'BOHR-3',
            'wfc_min': 40,
@@ -102,6 +106,7 @@ class globals:
            'rho_min_pw': None,
            'rho_max_pw': None,
            'rho_inc_pw': None,
+           'wr_min_ratio': 2.0,
            'energy_ry': numpy.zeros((200,200),dtype=numpy.float64,), 
            'force_rybohr': numpy.zeros((200,200),dtype=numpy.float64,), 
            'energy_ev': numpy.zeros((200,200),dtype=numpy.float64,), 
@@ -140,6 +145,16 @@ class globals:
           'data_w': 0,
           'data_h': 0,
           }
+          
+  pwscf_times = {
+          'cpu_min': None,
+          'cpu_max': None,
+          'cpu_total': 0.0,
+          'wall_min': None,
+          'wall_max': None,
+          'wall_total': 0.0,
+          
+          }
          
   file_counter = 0   
   
@@ -155,4 +170,31 @@ class globals:
     name = name + file_counter_str    
     return name
          
-         
+     
+  def set_times(cpu_in, wall_in):
+    #print(cpu_in)
+    #print(wall_in)
+    try:
+      cpu = float(cpu_in)
+    except:    
+      cpu = None     
+    try:
+      wall = float(wall_in)
+    except:    
+      wall = None 
+      
+    if(cpu != None):
+      if(globals.pwscf_times['cpu_min'] == None or cpu < globals.pwscf_times['cpu_min']):
+        globals.pwscf_times['cpu_min'] = cpu
+      if(globals.pwscf_times['cpu_max'] == None or cpu > globals.pwscf_times['cpu_max']):
+        globals.pwscf_times['cpu_max'] = cpu
+      globals.pwscf_times['cpu_total'] = globals.pwscf_times['cpu_total'] + cpu
+    
+    if(wall != None):
+      if(globals.pwscf_times['wall_min'] == None or wall < globals.pwscf_times['wall_min']):
+        globals.pwscf_times['wall_min'] = wall
+      if(globals.pwscf_times['wall_max'] == None or wall > globals.pwscf_times['wall_max']):
+        globals.pwscf_times['wall_max'] = wall
+      globals.pwscf_times['wall_total'] = globals.pwscf_times['wall_total'] + wall  
+     
+    

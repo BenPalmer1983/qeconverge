@@ -136,7 +136,39 @@ class read_input:
       globals.ecut['rand_seed'] = globals.inp['configecut']['rand_seed']
     except:
       pass
-    
+      
+      
+      
+      
+    try:
+      globals.ecut2d['wfc_min'] = globals.inp['ecut2d']['wfc1']
+    except:
+      pass
+    try:
+      globals.ecut2d['wfc_max'] = globals.inp['ecut2d']['wfc2']
+    except:
+      pass
+    try:
+      globals.ecut2d['wfc_inc'] = globals.inp['ecut2d']['wcf3']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_min'] = globals.inp['ecut2d']['rho1']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_max'] = globals.inp['ecut2d']['rho2']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_inc'] = globals.inp['ecut2d']['rho3']
+    except:
+      pass    
+    try:
+      globals.ecut2d['wr_min_ratio'] = globals.inp['ecut2d']['wr_min_ratio']
+    except:
+      pass     
+      
        
     # KPOINTSCONV:configkpoint
     try:

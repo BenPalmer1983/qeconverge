@@ -10,6 +10,7 @@
 import numpy
 from units import units
 from globals import globals
+from plot_output import plot_output
 
 ###########################################
 #  CLASS conv_ecut2d
@@ -58,6 +59,8 @@ class conv_kpoints:
         log, files_out, run_list = pwscf_exec.execute(runfile)
                 
         fpo = pwscf_output(files_out[0]['file'])  
+        cpu, wall = fpo.get_times()
+        globals.set_times(cpu, wall)
         globals.kconv['energy_ry'][data_h,data_w] = fpo.get_energy_per_atom()
         globals.kconv['force_rybohr'][data_h,data_w] = fpo.get_force_per_atom()   
         globals.kconv['energy_ev'][data_h,data_w] = units.convert(globals.pw_units['energy'], 'EV', fpo.get_energy_per_atom())
@@ -75,38 +78,46 @@ class conv_kpoints:
     
 
     # Save csv
-    numpy.savetxt(globals.dirs['csv'] + '/kpoints_energy_ry.csv', globals.kconv['energy_ry'][0:data_h,0:data_w], fmt='%10.5f', delimiter=',')
-    numpy.savetxt(globals.dirs['csv'] + '/kpoints_energy_ev.csv', globals.kconv['energy_ev'][0:data_h,0:data_w], fmt='%10.5f', delimiter=',')
-    numpy.savetxt(globals.dirs['csv'] + '/kpoints_force_ry.csv', globals.kconv['force_rybohr'][0:data_h,0:data_w], fmt='%10.5f', delimiter=',')
-    numpy.savetxt(globals.dirs['csv'] + '/kpoints_force_ev.csv', globals.kconv['force_evang'][0:data_h,0:data_w], fmt='%10.5f', delimiter=',')
+    numpy.savetxt(globals.dirs['csv'] + '/kpoints_energy_ry.csv', globals.kconv['energy_ry'][0:data_h,0:data_w], fmt='%18.10f', delimiter=',')
+    numpy.savetxt(globals.dirs['csv'] + '/kpoints_energy_ev.csv', globals.kconv['energy_ev'][0:data_h,0:data_w], fmt='%18.10f', delimiter=',')
+    numpy.savetxt(globals.dirs['csv'] + '/kpoints_force_ry.csv', globals.kconv['force_rybohr'][0:data_h,0:data_w], fmt='%18.10f', delimiter=',')
+    numpy.savetxt(globals.dirs['csv'] + '/kpoints_force_ev.csv', globals.kconv['force_evang'][0:data_h,0:data_w], fmt='%18.10f', delimiter=',')
 
-    # PLOT
+    fh = open(globals.dirs['csv'] + '/kpoints_xy_lims.csv', 'w')
+    fh.write(str(globals.kconv['k_min']) + '\n')
+    fh.write(str(globals.kconv['k_max']) + '\n')
+    for j in range(len(globals.kconv['smearing_pw'])):
+      fh.write(str(str(globals.kconv['smearing_pw'][j])) + '\n')
+    fh.write('\n')
+    fh.close()
     
-    x = numpy.linspace(globals.kconv['k_min'], globals.kconv['k_max'], data_w)
-    y = numpy.zeros((len(globals.kconv['smearing_pw']),),)
-    y[:] = globals.kconv['smearing_pw'][:]
+
+
+
+    globals.kconv['data_w'] = data_w
+    globals.kconv['data_h'] = data_h
     
-    plt.clf()    
-    plt.contourf(x, y, globals.kconv['energy_ry'][0:data_h,0:data_w], 20, cmap='Greys')
-    plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ry.svg')
-
-    plt.clf()
-    plt.contourf(x, y, globals.kconv['force_rybohr'][0:data_h,0:data_w], 20, cmap='Greys')
-    plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_rybohr.svg')
-
-
-    x = numpy.linspace(globals.kconv['k_min'], globals.kconv['k_max'], data_w)
-    for i in range(len(y)):
-      y[i] = units.convert(globals.pw_units['energy'], 'EV', y[i])
     
-    plt.clf()    
-    plt.contourf(x, y, globals.kconv['energy_ev'][0:data_h,0:data_w], 20, cmap='Greys')
-    plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ev.svg')
+    
 
-    plt.clf()
-    plt.contourf(x, y, globals.kconv['force_evang'][0:data_h,0:data_w], 20, cmap='Greys')
-    plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_evang.svg')
+  @staticmethod
+  def conv_w(data_in, h, w):
+    out = numpy.zeros((h, w-1),)
+    for i in range(w-1):
+      out[:,i] = abs(data_in[:,i+1] - data_in[:,i])
+    return out
+    
+  @staticmethod
+  def conv_h(data_in, h, w):
+    out = numpy.zeros((h-1, w),)
+    for i in range(h-1):
+      out[i,:] = abs(data_in[i+1,:] - data_in[i,:])
+    return out
+    
+  @staticmethod
+  def half_scale(arr_in):
+    arr_out = numpy.zeros((len(arr_in) - 1,),)
+    for i in range(len(arr_out)):
+      arr_out[i] = 0.5 * (arr_in[i+1] + arr_in[i])
+    return arr_out
+

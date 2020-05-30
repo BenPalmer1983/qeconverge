@@ -25,6 +25,9 @@ class rand_dist:
     self.distType = "flat"
     # make a new distribution table
     self.table = RandDistTable()
+    
+  def setSeed(self, seed):
+    self.seed = seed
 
   def randomSeed(self):
     currentTime = time.time()

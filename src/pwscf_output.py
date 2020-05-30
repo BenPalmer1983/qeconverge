@@ -127,6 +127,7 @@ class pwscf_output:
     # Load
     self.load_status()
     self.load_type()
+    self.load_times()
     self.load_count()
     self.load_cpuinfo()
     self.load_crystal()
@@ -175,6 +176,55 @@ class pwscf_output:
       if(line[0:23] == "A final scf calculation"):
         self.data['type'] = "VC-RELAX"
     
+  def load_times(self):
+    # Calc Type
+    ###################################
+    for line in self.d:
+      line = line.strip()
+      if(line[0:14] == "PWSCF        :"):
+        fa = line.split(':')
+        fb = fa[1].split('CPU')
+        cpu = fb[0].strip()
+        fc = fb[1].split('WALL')
+        wall = fc[0].strip()   
+        self.data['cpu_time'] = pwscf_output.time_in_seconds(cpu)  
+        self.data['wall_time'] = pwscf_output.time_in_seconds(wall)  
+        #print(self.data['cpu_time'])
+        #print(self.data['wall_time'])
+      
+  @staticmethod
+  def time_in_seconds(inp): 
+    h = 0.0
+    m = 0.0
+    s = 0.0
+    if('h' in inp):
+      f = inp.split('h')
+      try:  
+        h = float(f[0])
+      except:
+        pass
+      inp = f[1]
+    if('m' in inp):
+      f = inp.split('m')
+      try:  
+        m = float(f[0])
+      except:
+        pass
+      inp = f[1]
+    if('s' in inp):
+      f = inp.split('s')
+      try:  
+        s = float(f[0])
+      except:
+        pass
+    return 3600 * h + 60 * m + s
+        
+    """    
+PWSCF        : 15m15.00s CPU    16m33.12s WALL 
+PWSCF        :    28.10s CPU        29.31s WALL 
+PWSCF        :     1h29m CPU        1h32m WALL         
+    """
+   
   
   def load_count(self):
     n = 0
@@ -699,6 +749,9 @@ class pwscf_output:
       
   def get_mass_per_crystal(self):
     return self.data['mass_per_crystal']
+      
+  def get_times(self):
+    return self.data['cpu_time'], self.data['wall_time']
       
 
 #################################

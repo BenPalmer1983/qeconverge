@@ -9,6 +9,7 @@
 
 import numpy
 from units import units
+from plot_output import plot_output
 
 ###########################################
 #  CLASS pwscf_converg
@@ -26,7 +27,19 @@ class conv_ecut:
     ef = pwscf_input()
     ef.load("input_template.in", globals.dirs['td'])
     ef.set_dirs()
-    ef.load_config(globals.ecut['type'], globals.ecut['size'], globals.ecut['alat_expanded_pw'])
+    #ef.load_config(globals.ecut['type'], globals.ecut['size'], globals.ecut['alat_expanded_pw'])
+    
+    s = {
+         'type': globals.ecut['type'],
+         'labels': None,
+         'size_x': globals.ecut['size'],
+         'size_y': globals.ecut['size'],
+         'size_z': globals.ecut['size'],
+        }       
+    ef.set_alat(globals.ecut['alat_expanded_pw'])
+    ef.set_config(s)
+    
+    
     ef.set_cp_arr(globals.ecut['cp'])
     ef.set_k_points(globals.ecut['kpoints_type'], globals.ecut['kpoints_val'])
     ef.rand_vary(globals.ecut['rand_variance'], globals.ecut['rand_seed'])
@@ -52,6 +65,7 @@ class conv_ecut:
     
 
     ecutwfc_v = None
+    ecutrho_v = None
     counter = 0   
     globals.log_fh.write('Data: \n')
     while((ecutwfc <= globals.ecut['wfc_max_pw'] and converged < 2) or counter < 5):
@@ -72,7 +86,9 @@ class conv_ecut:
       runfile.append(globals.dirs['ecut'] + '/' + file_name)
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
-      fpo = pwscf_output(files_out[0]['file'])      
+      fpo = pwscf_output(files_out[0]['file'])  
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)
       
       n = globals.ecut['data_len'][0]
       globals.ecut['data_len'][0] = globals.ecut['data_len'][0] + 1
@@ -81,10 +97,12 @@ class conv_ecut:
       globals.ecut['data'][1,n] = 4 * ecutwfc
       globals.ecut['data'][2,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][3,n] = fpo.get_force_per_atom()
-     
-      globals.log_fh.write(str(globals.ecut['data'][0,n]) + ' ' + str(globals.ecut['data'][1,n]) + ' ' + str(globals.ecut['data'][2,n]) + ' ' + str(globals.ecut['data'][3,n]) + ' ' + '\n')
-
+      
+      econv = None
+      fconv = None
       if(counter > 1):
+        econv = round(abs(globals.ecut['data'][2,n] - globals.ecut['data'][2,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][3,n] - globals.ecut['data'][3,n-1]),8)
         if(converged < 2):
           ecutwfc_v = ecutwfc - globals.ecut['wfc_inc_pw']
         if(abs(globals.ecut['data'][2,n] - globals.ecut['data'][2,n-1]) <= econv_threshold and abs(globals.ecut['data'][3,n] - globals.ecut['data'][3,n-1]) <= fconv_threshold):
@@ -92,6 +110,17 @@ class conv_ecut:
         else:
           converged = 0
 
+      globals.log_fh.write('INC WFC ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][0,n], 10) + 
+                           std.str_padded(globals.ecut['data'][1,n], 10) + 
+                           std.str_padded(globals.ecut['data'][2,n], 17) + 
+                           std.str_padded(globals.ecut['data'][3,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
       
       # Increment
       ecutwfc = ecutwfc + globals.ecut['wfc_inc_pw']   
@@ -108,7 +137,7 @@ class conv_ecut:
     
     globals.log_fh.write('2. DECREASE ECUTRHO \n')
     
-    converged = 0
+    notconverged = 0
     ecutwfc = ecutwfc_v
     ecutrho = 4.0 * ecutwfc_v
     ecutrho_min = globals.ecut['wr_min_ratio'] * ecutwfc
@@ -122,10 +151,10 @@ class conv_ecut:
     globals.log_fh.write('fconv_threshold: ' + str(fconv_threshold) + ' \n')
     
 
-    ecutrho_v = None
+    ecutrho_v = ecutrho
     counter = 0   
     globals.log_fh.write('Data: \n')
-    while((ecutrho >= ecutrho_min and converged < 1) or counter < 5):
+    while((ecutrho >= ecutrho_min and notconverged < 1) or counter < 5):
       counter = counter + 1
 
       # Get file name
@@ -144,6 +173,8 @@ class conv_ecut:
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
       fpo = pwscf_output(files_out[0]['file'])      
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)
       
       n = globals.ecut['data_len'][1]
       globals.ecut['data_len'][1] = globals.ecut['data_len'][1] + 1
@@ -153,15 +184,28 @@ class conv_ecut:
       globals.ecut['data'][7,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][8,n] = fpo.get_force_per_atom()
      
-      globals.log_fh.write(str(globals.ecut['data'][5,n]) + ' ' + str(globals.ecut['data'][6,n]) + ' ' + str(globals.ecut['data'][7,n]) + ' ' + str(globals.ecut['data'][8,n]) + ' ' + '\n')
-
+      #globals.log_fh.write(str(globals.ecut['data'][5,n]) + ' ' + str(globals.ecut['data'][6,n]) + ' ' + str(globals.ecut['data'][7,n]) + ' ' + str(globals.ecut['data'][8,n]) + ' ' + '\n')
+      econv = None
+      fconv = None
       if(counter > 1):
-        if(converged < 1):
-          ecutrho_v = ecutrho + globals.ecut['rho_dec_pw']
-        if(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]) <= econv_threshold and abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]) <= fconv_threshold):
-          converged = converged + 1
-        else:
-          converged = 0
+        econv = round(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]),8)
+        if(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]) > econv_threshold or abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]) > fconv_threshold):
+          notconverged = notconverged + 1       
+        ecutrho_v = ecutrho + globals.ecut['rho_dec_pw']  # BEST IS ALWAYS LAST ECUTRHO (i.e. this ecutrho + the difference)
+          
+
+      globals.log_fh.write('DEC RHO ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][5,n], 10) + 
+                           std.str_padded(globals.ecut['data'][6,n], 10) + 
+                           std.str_padded(globals.ecut['data'][7,n], 17) + 
+                           std.str_padded(globals.ecut['data'][8,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
 
       
       # Decrease
@@ -178,7 +222,7 @@ class conv_ecut:
     
     globals.log_fh.write('3. DECREASE ECUTWFC \n')
     
-    converged = 0
+    unconverged = 0
     ecutwfc = ecutwfc_v
     ecutrho = ecutrho_v
 
@@ -193,7 +237,7 @@ class conv_ecut:
 
     counter = 0   
     globals.log_fh.write('Data: \n')
-    while((ecutwfc >= globals.ecut['wfc_min_pw'] and converged < 1) or counter < 5):
+    while((ecutwfc >= globals.ecut['wfc_min_pw'] and unconverged < 1) or counter < 5):
       counter = counter + 1
 
       # Get file name
@@ -211,7 +255,9 @@ class conv_ecut:
       runfile.append(globals.dirs['ecut'] + '/' + file_name)
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
-      fpo = pwscf_output(files_out[0]['file'])      
+      fpo = pwscf_output(files_out[0]['file'])  
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)    
       
       n = globals.ecut['data_len'][2]
       globals.ecut['data_len'][2] = globals.ecut['data_len'][2] + 1
@@ -221,16 +267,28 @@ class conv_ecut:
       globals.ecut['data'][12,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][13,n] = fpo.get_force_per_atom()
      
-      globals.log_fh.write(str(globals.ecut['data'][10,n]) + ' ' + str(globals.ecut['data'][11,n]) + ' ' + str(globals.ecut['data'][12,n]) + ' ' + str(globals.ecut['data'][13,n]) + ' ' + '\n')
+      #globals.log_fh.write(str(globals.ecut['data'][10,n]) + ' ' + str(globals.ecut['data'][11,n]) + ' ' + str(globals.ecut['data'][12,n]) + ' ' + str(globals.ecut['data'][13,n]) + ' ' + '\n')
 
+      econv = None
+      fconv = None
       if(counter > 1):
-        if(converged < 1):
-          ecutwfc_v = ecutwfc + globals.ecut['wfc_dec_pw']
+        econv = round(abs(globals.ecut['data'][12,n] - globals.ecut['data'][12,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][13,n] - globals.ecut['data'][13,n-1]),8)
         if(abs(globals.ecut['data'][12,n] - globals.ecut['data'][12,n-1]) <= econv_threshold and abs(globals.ecut['data'][13,n] - globals.ecut['data'][13,n-1]) <= fconv_threshold):
-          converged = converged + 1
-        else:
-          converged = 0
+          notconverged = notconverged + 1  
+        ecutwfc_v = ecutwfc + globals.ecut['wfc_dec_pw']  # BEST IS ALWAYS LAST ECUTRHO (i.e. this ecutrho + the difference)  
 
+      globals.log_fh.write('DEC WFC ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][10,n], 10) + 
+                           std.str_padded(globals.ecut['data'][11,n], 10) + 
+                           std.str_padded(globals.ecut['data'][12,n], 17) + 
+                           std.str_padded(globals.ecut['data'][13,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
       
       # Increment
       ecutwfc = ecutwfc - globals.ecut['wfc_dec_pw']   
@@ -327,7 +385,8 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (RY)')
     axs[2, 1].set_ylabel('Force (RY/BOHR)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ry.svg')
+    #plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ry.svg')
+    plot_output.plot(plt, 'ecut_convergence_ry')
   
     
     # PLOT CONVERGENCE REL RY
@@ -370,7 +429,8 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (RY)')
     axs[2, 1].set_ylabel('Force (RY/BOHR)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_adjusted_ry.svg')
+    #plt.savefig(globals.dirs['plots'] + '/' + 'convergence_adjusted_ry.svg')
+    plot_output.plot(plt, 'ecut_convergence_adjusted_ry')
   
     
     # PLOT CONVERGENCE EV
@@ -413,7 +473,8 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (eV)')
     axs[2, 1].set_ylabel('Force (eV/ang)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ev.svg')
+    #plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ev.svg')
+    plot_output.plot(plt, 'ecut_convergence_ev')
     
     
 

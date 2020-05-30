@@ -1,0 +1,12 @@
+File Name:                      file_000120
+Path:                           wd/kpoints
+File In:                        wd/kpoints/file_000120.in
+File Out:                       wd/kpoints/file_000120.out
+Hash:                           51308adc149b4862e9e1012638ea85ad15ef05a37b685d0122da67713ea0d75a7fdba5c2e6821b668e632c63684834786a86adf9c2b6d025ab03ea6b2065633e
+Use Cache?:                     False
+Cache Used:                     False
+Cache In:                       /opt/pwscf_cache/51308adc149b4862e9e1012638ea85ad15ef05a37b685d0122da67713ea0d75a7fdba5c2e6821b668e632c63684834786a86adf9c2b6d025ab03ea6b2065633e.in
+Cache Out:                      /opt/pwscf_cache/51308adc149b4862e9e1012638ea85ad15ef05a37b685d0122da67713ea0d75a7fdba5c2e6821b668e632c63684834786a86adf9c2b6d025ab03ea6b2065633e.out
+CMD:                            mpirun -n 4 /opt/qe/bin/pw.x -i wd/kpoints/file_000120.in > wd/kpoints/file_000120.out
+
+

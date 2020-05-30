@@ -59,6 +59,16 @@ class pwscf_converge:
 # KPOINTS CONV
     conv_kpoints.run()
     
+    globals.log_fh.write('\nCalculations complete.\n\n')
+    globals.log_fh.write('CPU min:     ' + str(globals.pwscf_times['cpu_min']) + '\n')
+    globals.log_fh.write('CPU max:     ' + str(globals.pwscf_times['cpu_max']) + '\n')
+    globals.log_fh.write('CPU total:   ' + str(globals.pwscf_times['cpu_total']) + '\n')
+    globals.log_fh.write('\n')
+    globals.log_fh.write('Wall min:    ' + str(globals.pwscf_times['wall_min']) + '\n')
+    globals.log_fh.write('Wall max:    ' + str(globals.pwscf_times['wall_max']) + '\n')
+    globals.log_fh.write('Wall total:  ' + str(globals.pwscf_times['wall_total']) + '\n')
+    globals.log_fh.write('\n')
+    
 # End time
     globals.times['end'] = time.time()
     globals.times['duration'] = globals.times['end'] - globals.times['start']
@@ -399,6 +409,13 @@ class std:
       out = out + " "      
     return out[0:pad]
     
+  @staticmethod
+  def str_padded(inp, pad=16):
+    out = str(inp)  
+    while(len(out)<pad):
+      out = out + " "      
+    return out[0:pad]
+
 ###########################################
 #  CLASS pwscf_inpu
 ###########################################
@@ -786,7 +803,7 @@ class pwscf_input:
     for key in sorted(self.electrons.keys()):
       value = self.electrons[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
 # IONS
@@ -794,7 +811,7 @@ class pwscf_input:
     for key in sorted(self.ions.keys()):
       value = self.ions[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
 # CELL
@@ -802,14 +819,14 @@ class pwscf_input:
     for key in sorted(self.cell.keys()):
       value = self.cell[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
 # ATOMIC_SPECIES
     file += "ATOMIC_SPECIES \n"
     for species in self.atomic_species:      
       for field in species:
-        file += field + " "
+        file += str(field) + " "
       file += "\n"
 
 # ATOMIC_POSITIONS
@@ -817,30 +834,40 @@ class pwscf_input:
     for position in self.atomic_positions:      
       if(header == 0):
         file += "ATOMIC_POSITIONS "
-        file += position + "\n"
+        file += str(position) + "\n"
         header = 1
 #elif(header == 1):
 #  file += position[1] + "\n"
 #  header = 2
       elif(header == 1):  
         for field in position:
-          file += field + "   "
+          file += str(field) + "   "
         file += "\n"
 
 # K_POINTS
-    file += "K_POINTS " + self.k_points[0]
+    kpoints_type = self.k_points[0]
+    kpoints_mesh = ''
+    if(len(self.k_points) == 2):
+      if(type(self.k_points[1]) == list):
+        for k in self.k_points[1]:
+          kpoints_mesh += str(k) + ' '
+      else:
+        kpoints_mesh += self.k_points[1]
+    elif(len(self.k_points) == 7):
+      for i in range(1,len(self.k_points)):
+        kpoints_mesh += self.k_points[i] + ' '
+    
+    file += "K_POINTS " + kpoints_type
     file += "\n"
-    for i in range(1,len(self.k_points)):
-      for point in self.k_points[i]:
-        file += point + " "
-      file += "\n"
+    file += kpoints_mesh + " "
+    file += "\n"   
         
 # K_POINTS
     file += "CELL_PARAMETERS " + self.cell_parameters[0]
     file += "\n"
     for i in range(1,len(self.cell_parameters)):
       for point in self.cell_parameters[i]:
-        file += point + " "
+        file += str(point) + " "
       file += "\n"
       
 # Process
@@ -933,7 +960,7 @@ class pwscf_input:
     if(scratch_dir != None):
       self.scratch_dir = scratch_dir
     if(pp_dir != None):
-      self.scratch_dir = pp_dir
+      self.pp_dir = pp_dir
    
     self.control['outdir'] = '"' + self.scratch_dir + '"'
     self.control['pseudo_dir'] = '"' + self.pp_dir + '"'
@@ -1028,6 +1055,45 @@ class pwscf_input:
   def set_cp_zeros(self):
     self.set_cell_parameters([[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]])
     
+  def set_seed(self, seed=0):
+    random.seed(seed)
+    self.rand.setSeed(seed)
+    self.rand_seed_set = 1
+
+# K-Points
+####################
+  def set_k_points(self, k_points_type, points_list):
+    self.k_points = []
+    self.k_points.append(k_points_type)
+    self.k_points.append(points_list)  
+    
+# Atom Positions
+####################
+  def set_atomic_positions(self, atoms, c_type='crystal'):    
+    self.system['nat'] = str(len(atoms))
+    self.atomic_positions = []
+    self.atomic_positions.append(c_type)
+    for atom in atoms:
+      self.atomic_positions.append([str(atom[0]),str(float(atom[1])),str(float(atom[2])),str(float(atom[3]))])
+    
+  def set_config(self, s):
+  
+    if(s['labels'] == None):
+      s['labels'] = self.get_atom_labels()
+      
+    a = atom_config.make(s)     
+    
+    self.atomic_positions = []
+    self.atomic_positions.append('crystal')
+    self.system['nat'] = str(len(a['atoms']))
+    for atom in a['atoms']:
+      self.atomic_positions.append([str(atom[0]),str(float(atom[1])),str(float(atom[2])),str(float(atom[3]))])
+    
+    self.system['celldm'][0] = str(a['alat_change'] * float(self.system['celldm'][0]))
+    
+# Make
+    self.make()    
+    
   def nomalise_cell_parameters(self):
     self.system['celldm'][0] = str(float(self.system['celldm'][0]) * float(self.cell_parameters[1][0]))
     d = float(self.cell_parameters[1][0])
@@ -1035,13 +1101,6 @@ class pwscf_input:
       for j in range(0,3): 
         self.cell_parameters[i][j] = str(float(self.cell_parameters[i][j]) / d)
         
-# K-Points
-####################
-  def set_k_points(self, k_points_type, points_list):
-    self.k_points = []
-    self.k_points.append(k_points_type)
-    self.k_points.append(points_list)
-    
 ############################
 #  Load From Output
 ############################
@@ -1063,7 +1122,7 @@ class pwscf_input:
 
   def load_config(self, type="FCC", size=1, alat=None, cp=None): 
     type = type.upper()
-    result = {"CrystalAtoms": 0, "TotalAtoms": 0}
+    result = {"CrystalAtoms": 0, "TotalAtoms": 0}    
     
 # SC
     if(type == "SC"):
@@ -1082,7 +1141,7 @@ class pwscf_input:
       atoms, c_atoms, n_atoms = pwscf_standard.bcc(labels,size) 
       self.atomic_positions = atoms
       self.system['nat'] = str(len(self.atomic_positions) - 1)
-    
+      
 # FCC
     if(type == "FCC"):
       labels = []
@@ -1161,6 +1220,32 @@ class pwscf_input:
       self.atomic_positions[n][1] = str(float(self.atomic_positions[n][1]) + r[0])
       self.atomic_positions[n][2] = str(float(self.atomic_positions[n][2]) + r[1])
       self.atomic_positions[n][3] = str(float(self.atomic_positions[n][3]) + r[2])
+      
+  def rand_vary_positions(self, vmin=0.0, vmax=0.0):
+    if(not (vmin == 0.0 and vmax == 0.0)):  
+      c = numpy.zeros((3,3))
+      for i in range(1,4):
+        for j in range(0,3): 
+          c[i-1,j] = self.cell_parameters[i][j]
+      c_inv = numpy.linalg.inv(c)
+
+      for n in range(1, len(self.atomic_positions)):
+        r = numpy.zeros((3))
+        r[0] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+        r[1] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+        r[2] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+    
+        r = numpy.matmul(c_inv, r)
+        self.atomic_positions[n][1] = str(float(self.atomic_positions[n][1]) + r[0])
+        self.atomic_positions[n][2] = str(float(self.atomic_positions[n][2]) + r[1])
+        self.atomic_positions[n][3] = str(float(self.atomic_positions[n][3]) + r[2])   
+
+  def rand_vary_alat(self, vmin=0.0, vmax=0.0):
+    if(not (vmin == 0.0 and vmax == 0.0)):
+      alat = self.get_alat()
+      f = 1.0 + vmin + random.uniform(0.0,1.0) * (vmax - vmin)
+      alat = round(f * float(alat),8)
+      self.set_alat(alat)
 
 ############################
 #  Get
@@ -1197,6 +1282,31 @@ class pwscf_input:
 
   def get_alat(self):
     return self.system['celldm'][0]
+
+  def get_ecutwfc(self):
+    return self.system['ecutwfc']
+  def get_ecutrho(self):
+    return self.system['ecutrho']
+  def get_degauss(self):
+    return self.system['degauss']
+  def get_kpoints(self):
+    return str(self.k_points[0]) + ' ' + str(self.k_points[1])
+
+  def get_atomic_species(self):
+    return self.atomic_species
+    
+  def get_atom_labels(self):
+    l = []
+    for li in self.atomic_species:
+      l.append(li[0])
+    return l
+    
+  def get_random_atom_label(self):
+    l = []
+    for li in self.atomic_species:
+      l.append(li[0])
+    r = random.randint(0, len(l)-1) 
+    return l[r]
 
 #################################
 # Signature
@@ -1451,9 +1561,9 @@ class pwscf_input:
        if(isinstance(value, (list,))):
          for i in range(len(value)):
            if(value[i] != None):
-             output += key + "(" + str(i+1) + ") = " + value[i] + ", \n"                
+             output += str(key) + "(" + str(i+1) + ") = " + str(value[i]) + ", \n"                
        else:
-         output += key + " = " + value + ", \n"   
+         output += str(key) + " = " + str(value) + ", \n"   
     return output    
 
   @staticmethod
@@ -1537,6 +1647,9 @@ class rand_dist:
     self.distType = "flat"
 # make a new distribution table
     self.table = RandDistTable()
+    
+  def setSeed(self, seed):
+    self.seed = seed
 
   def randomSeed(self):
     currentTime = time.time()
@@ -2000,6 +2113,7 @@ class pwscf_output:
 # Load
     self.load_status()
     self.load_type()
+    self.load_times()
     self.load_count()
     self.load_cpuinfo()
     self.load_crystal()
@@ -2047,6 +2161,55 @@ class pwscf_output:
       if(line[0:23] == "A final scf calculation"):
         self.data['type'] = "VC-RELAX"
     
+  def load_times(self):
+# Calc Type
+###################################
+    for line in self.d:
+      line = line.strip()
+      if(line[0:14] == "PWSCF        :"):
+        fa = line.split(':')
+        fb = fa[1].split('CPU')
+        cpu = fb[0].strip()
+        fc = fb[1].split('WALL')
+        wall = fc[0].strip()   
+        self.data['cpu_time'] = pwscf_output.time_in_seconds(cpu)  
+        self.data['wall_time'] = pwscf_output.time_in_seconds(wall)  
+#print(self.data['cpu_time'])
+#print(self.data['wall_time'])
+      
+  @staticmethod
+  def time_in_seconds(inp): 
+    h = 0.0
+    m = 0.0
+    s = 0.0
+    if('h' in inp):
+      f = inp.split('h')
+      try:  
+        h = float(f[0])
+      except:
+        pass
+      inp = f[1]
+    if('m' in inp):
+      f = inp.split('m')
+      try:  
+        m = float(f[0])
+      except:
+        pass
+      inp = f[1]
+    if('s' in inp):
+      f = inp.split('s')
+      try:  
+        s = float(f[0])
+      except:
+        pass
+    return 3600 * h + 60 * m + s
+        
+    """    
+PWSCF        : 15m15.00s CPU    16m33.12s WALL 
+PWSCF        :    28.10s CPU        29.31s WALL 
+PWSCF        :     1h29m CPU        1h32m WALL         
+    """
+   
   def load_count(self):
     n = 0
     while(n < len(self.d)):
@@ -2542,6 +2705,9 @@ class pwscf_output:
       
   def get_mass_per_crystal(self):
     return self.data['mass_per_crystal']
+      
+  def get_times(self):
+    return self.data['cpu_time'], self.data['wall_time']
       
 #################################
 # Interactive
@@ -3170,6 +3336,244 @@ class pwscf_output:
 """
 
 ###########################################
+#  CLASS atom_confi
+###########################################
+class atom_config:
+
+  @staticmethod
+  def make(settings_in={}):
+  
+# Default Settings
+    s = {
+        'type': 'sc',
+        'labels': ['Atom'],
+        'size_x': 1,
+        'size_y': 1,
+        'size_z': 1,
+        'vac': 0,
+        'tetra': [],
+        'octa': [],
+        'atoms': [],
+        'alat_change': 0.0,
+        'cell_count': 0,
+        'atom_count_no_defects': 0,
+        'atom_count': 0,
+        }
+               
+# Load Settings
+    for k in s.keys():
+      if(k in settings_in.keys()):
+        s[k] = settings_in[k]
+
+# Atom list
+    atoms = []
+    
+# Size
+    cell_count = s['size_x'] * s['size_y'] * s['size_z']
+    
+# Base Cell
+    b = atom_config.base(s['type'])
+    
+# Unedited size
+    a_count = len(b) * cell_count
+    
+    tetra_l = atom_config.r_list(s['tetra'], cell_count)
+    octa_l = atom_config.r_list(s['octa'], cell_count)
+    vac = []
+    for v in range(s['vac']):
+      vac.append('')
+    vac = atom_config.r_list(vac, a_count)
+        
+    l = 0
+    c = 0
+    a = 0
+    for x in range(s['size_x']):
+      for y in range(s['size_y']):
+        for z in range(s['size_z']):
+          for n in range(len(b)):
+            label = s['labels'][l % len(s['labels'])]
+            xc = (x + b[n][0]) / s['size_x']
+            yc = (y + b[n][1]) / s['size_y']
+            zc = (z + b[n][2]) / s['size_z']            
+            if(vac[a] == None):
+              atoms.append([label, xc, yc, zc])
+            a = a + 1
+            l = l + 1
+          if(tetra_l[c] != None):
+            t = atom_config.fcc_tetra()
+            atoms.append([tetra_l[c], t[0][0], t[0][1], t[0][2]])
+          if(octa_l[c] != None):
+            rn = random.randint(0,1)
+            if(rn == 0):
+              o = atom_config.fcc_octa_1()
+            else:
+              o = atom_config.fcc_octa_2()              
+            atoms.append([octa_l[c], o[0][0], o[0][1], o[0][2]])
+          c = c + 1
+            
+    alat_change = (len(atoms)/a_count)**(1/3)  
+    
+# Store output
+    s['atoms'] = atoms
+    s['alat_change'] = alat_change
+    s['cell_count'] = cell_count
+    s['atom_count_no_defects'] = a_count
+    s['atom_count'] = len(atoms)
+ 
+# RETURN
+    return s
+    
+  @staticmethod
+  def base(type = 'sc'):
+    type = type.lower()
+    if(type == 'bcc'):
+      return atom_config.bcc()
+    elif(type == 'fcc'):
+      return atom_config.fcc()
+    elif(type == 'zb'):
+      return atom_config.zb()
+    return atom_config.sc()
+    
+  @staticmethod
+  def sc():
+    return [
+           [0.0,0.0,0.0]
+           ]
+
+  @staticmethod
+  def bcc():
+    return [
+           [0.0,0.0,0.0],
+           [0.5,0.5,0.5]
+           ]
+           
+  @staticmethod
+  def fcc():
+    return [
+           [0.0,0.0,0.0],
+           [0.5,0.5,0.0],
+           [0.5,0.0,0.5],
+           [0.0,0.5,0.5]
+           ]                
+           
+  @staticmethod
+  def zb():
+    return [
+           [0.0,0.0,0.0],
+           [0.5,0.5,0.0],
+           [0.5,0.0,0.5],
+           [0.0,0.5,0.5],
+           [0.25,0.25,0.25],
+           [0.75,0.75,0.25],
+           [0.25,0.75,0.75],
+           [0.75,0.25,0.75]
+           ]   
+           
+  @staticmethod
+  def fcc_tetra():
+    return [
+           [0.25,0.25,0.25]
+           ]     
+           
+  @staticmethod
+  def fcc_octa_1():
+    return [
+           [0.5,0.5,0.5]
+           ]    
+           
+  @staticmethod
+  def fcc_octa_2():
+    return [
+           [1.0,0.5,0.0]
+           ]         
+           
+  @staticmethod        
+  def r_list(inp, out_size):
+    out = []
+    for i in range(out_size):
+      out.append(None)
+    
+    if(len(inp) == 0):
+      return out
+      
+    for i in range(min(len(inp), out_size)):
+      out[i] = inp[i]
+# Shuffle
+    for i in range(5 * len(out)):
+      a = random.randint(0,len(out)-1)
+      b = random.randint(0,len(out)-1)
+      while(a == b):
+        b = random.randint(0,len(out)-1)
+      temp = out[a]
+      out[a] = out[b]
+      out[b] = temp
+    
+    return out 
+           
+"""
+
+  @staticmethod
+  def sc(label, size=1):
+    c_atoms = 4
+    n_atoms = c_atoms * size**3
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    for x in range(size):
+      for y in range(size):
+        for z in range(size):
+          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)]]
+          for i in range(len(coords)):
+            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
+    return atoms, c_atoms, n_atoms   
+
+  @staticmethod
+  def bcc(label, size=1):
+    c_atoms = 4
+    n_atoms = c_atoms * size**3
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    for x in range(size):
+      for y in range(size):
+        for z in range(size):
+          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)],
+                    [str((x+0.5)/size), str((y+0.5)/size), str((z+0.5)/size)]]
+          for i in range(len(coords)):
+            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
+    return atoms, c_atoms, n_atoms    
+
+  @staticmethod
+  def fcc(label, size=1):
+    c_atoms = 4
+    n_atoms = c_atoms * size**3
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    for x in range(size):
+      for y in range(size):
+        for z in range(size):
+          coords = [[str((x+0.0)/size), str((y+0.0)/size), str((z+0.0)/size)],
+                    [str((x+0.5)/size), str((y+0.5)/size), str((z+0.0)/size)],
+                    [str((x+0.5)/size), str((y+0.0)/size), str((z+0.5)/size)],
+                    [str((x+0.0)/size), str((y+0.5)/size), str((z+0.5)/size)]]
+          for i in range(len(coords)):
+            atoms.append([label[i % len(label)],coords[i][0],coords[i][1],coords[i][2]])
+    return atoms, c_atoms, n_atoms      
+
+  @staticmethod
+  def isolated(label, size=1):   
+    c_atoms = 1
+    n_atoms = 1
+    if(not isinstance(label, (list,))):
+      label = [label]
+    atoms = ['crystal']
+    atoms.append([label[0], "0.5", "0.5", "0.5"])
+    return atoms, c_atoms, n_atoms   
+    
+"""    
+    
+###########################################
 #  CLASS pwscf_standar
 ###########################################
 class pwscf_standard:
@@ -3759,6 +4163,9 @@ class globals:
          'kpoints': 'wd/kpoints',
          'runpwscf': 'wd/runpwscf',
          'plots': 'wd/plots',
+         'plots_eps': 'wd/plots/eps',
+         'plots_eps_small': 'wd/plots/eps_small',
+         'plots_svg': 'wd/plots/svg',
          'csv': 'wd/csv',  
          'logs': 'wd/logs',  
          }
@@ -3883,6 +4290,16 @@ class globals:
           'data_w': 0,
           'data_h': 0,
           }
+          
+  pwscf_times = {
+          'cpu_min': None,
+          'cpu_max': None,
+          'cpu_total': 0.0,
+          'wall_min': None,
+          'wall_max': None,
+          'wall_total': 0.0,
+          
+          }
          
   file_counter = 0   
   
@@ -3897,6 +4314,32 @@ class globals:
     name = name + file_counter_str    
     return name
          
+  def set_times(cpu_in, wall_in):
+#print(cpu_in)
+#print(wall_in)
+    try:
+      cpu = float(cpu_in)
+    except:    
+      cpu = None     
+    try:
+      wall = float(wall_in)
+    except:    
+      wall = None 
+      
+    if(cpu != None):
+      if(globals.pwscf_times['cpu_min'] == None or cpu < globals.pwscf_times['cpu_min']):
+        globals.pwscf_times['cpu_min'] = cpu
+      if(globals.pwscf_times['cpu_max'] == None or cpu > globals.pwscf_times['cpu_max']):
+        globals.pwscf_times['cpu_max'] = cpu
+      globals.pwscf_times['cpu_total'] = globals.pwscf_times['cpu_total'] + cpu
+    
+    if(wall != None):
+      if(globals.pwscf_times['wall_min'] == None or wall < globals.pwscf_times['wall_min']):
+        globals.pwscf_times['wall_min'] = wall
+      if(globals.pwscf_times['wall_max'] == None or wall > globals.pwscf_times['wall_max']):
+        globals.pwscf_times['wall_max'] = wall
+      globals.pwscf_times['wall_total'] = globals.pwscf_times['wall_total'] + wall  
+     
 ###########################################
 #  CLASS read_inpu
 ###########################################
@@ -4017,7 +4460,32 @@ class read_input:
       globals.ecut['rand_seed'] = globals.inp['configecut']['rand_seed']
     except:
       pass
-    
+      
+    try:
+      globals.ecut2d['wfc_min'] = globals.inp['ecut2d']['wfc1']
+    except:
+      pass
+    try:
+      globals.ecut2d['wfc_max'] = globals.inp['ecut2d']['wfc2']
+    except:
+      pass
+    try:
+      globals.ecut2d['wfc_inc'] = globals.inp['ecut2d']['wcf3']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_min'] = globals.inp['ecut2d']['rho1']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_max'] = globals.inp['ecut2d']['rho2']
+    except:
+      pass
+    try:
+      globals.ecut2d['rho_inc'] = globals.inp['ecut2d']['rho3']
+    except:
+      pass      
+      
 # KPOINTSCONV:configkpoint
     try:
       globals.kconv['run'] = std.option(globals.inp['kconv']['run'])
@@ -4155,7 +4623,18 @@ class conv_ecut:
     ef = pwscf_input()
     ef.load("input_template.in", globals.dirs['td'])
     ef.set_dirs()
-    ef.load_config(globals.ecut['type'], globals.ecut['size'], globals.ecut['alat_expanded_pw'])
+#ef.load_config(globals.ecut['type'], globals.ecut['size'], globals.ecut['alat_expanded_pw'])
+    
+    s = {
+         'type': globals.ecut['type'],
+         'labels': None,
+         'size_x': globals.ecut['size'],
+         'size_y': globals.ecut['size'],
+         'size_z': globals.ecut['size'],
+        }       
+    ef.set_alat(globals.ecut['alat_expanded_pw'])
+    ef.set_config(s)
+    
     ef.set_cp_arr(globals.ecut['cp'])
     ef.set_k_points(globals.ecut['kpoints_type'], globals.ecut['kpoints_val'])
     ef.rand_vary(globals.ecut['rand_variance'], globals.ecut['rand_seed'])
@@ -4178,6 +4657,7 @@ class conv_ecut:
     globals.log_fh.write('fconv_threshold: ' + str(fconv_threshold) + ' \n')
     
     ecutwfc_v = None
+    ecutrho_v = None
     counter = 0   
     globals.log_fh.write('Data: \n')
     while((ecutwfc <= globals.ecut['wfc_max_pw'] and converged < 2) or counter < 5):
@@ -4198,7 +4678,9 @@ class conv_ecut:
       runfile.append(globals.dirs['ecut'] + '/' + file_name)
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
-      fpo = pwscf_output(files_out[0]['file'])      
+      fpo = pwscf_output(files_out[0]['file'])  
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)
       
       n = globals.ecut['data_len'][0]
       globals.ecut['data_len'][0] = globals.ecut['data_len'][0] + 1
@@ -4207,10 +4689,12 @@ class conv_ecut:
       globals.ecut['data'][1,n] = 4 * ecutwfc
       globals.ecut['data'][2,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][3,n] = fpo.get_force_per_atom()
-     
-      globals.log_fh.write(str(globals.ecut['data'][0,n]) + ' ' + str(globals.ecut['data'][1,n]) + ' ' + str(globals.ecut['data'][2,n]) + ' ' + str(globals.ecut['data'][3,n]) + ' ' + '\n')
-
+      
+      econv = None
+      fconv = None
       if(counter > 1):
+        econv = round(abs(globals.ecut['data'][2,n] - globals.ecut['data'][2,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][3,n] - globals.ecut['data'][3,n-1]),8)
         if(converged < 2):
           ecutwfc_v = ecutwfc - globals.ecut['wfc_inc_pw']
         if(abs(globals.ecut['data'][2,n] - globals.ecut['data'][2,n-1]) <= econv_threshold and abs(globals.ecut['data'][3,n] - globals.ecut['data'][3,n-1]) <= fconv_threshold):
@@ -4218,6 +4702,18 @@ class conv_ecut:
         else:
           converged = 0
 
+      globals.log_fh.write('INC WFC ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][0,n], 10) + 
+                           std.str_padded(globals.ecut['data'][1,n], 10) + 
+                           std.str_padded(globals.ecut['data'][2,n], 17) + 
+                           std.str_padded(globals.ecut['data'][3,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
+      
 # Increment
       ecutwfc = ecutwfc + globals.ecut['wfc_inc_pw']   
       
@@ -4231,7 +4727,7 @@ class conv_ecut:
     
     globals.log_fh.write('2. DECREASE ECUTRHO \n')
     
-    converged = 0
+    notconverged = 0
     ecutwfc = ecutwfc_v
     ecutrho = 4.0 * ecutwfc_v
     ecutrho_min = globals.ecut['wr_min_ratio'] * ecutwfc
@@ -4243,10 +4739,10 @@ class conv_ecut:
     globals.log_fh.write('econv_threshold: ' + str(econv_threshold) + ' \n')
     globals.log_fh.write('fconv_threshold: ' + str(fconv_threshold) + ' \n')
     
-    ecutrho_v = None
+    ecutrho_v = ecutrho
     counter = 0   
     globals.log_fh.write('Data: \n')
-    while((ecutrho >= ecutrho_min and converged < 1) or counter < 5):
+    while((ecutrho >= ecutrho_min and notconverged < 1) or counter < 5):
       counter = counter + 1
 
 # Get file name
@@ -4265,6 +4761,8 @@ class conv_ecut:
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
       fpo = pwscf_output(files_out[0]['file'])      
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)
       
       n = globals.ecut['data_len'][1]
       globals.ecut['data_len'][1] = globals.ecut['data_len'][1] + 1
@@ -4274,15 +4772,27 @@ class conv_ecut:
       globals.ecut['data'][7,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][8,n] = fpo.get_force_per_atom()
      
-      globals.log_fh.write(str(globals.ecut['data'][5,n]) + ' ' + str(globals.ecut['data'][6,n]) + ' ' + str(globals.ecut['data'][7,n]) + ' ' + str(globals.ecut['data'][8,n]) + ' ' + '\n')
-
+#globals.log_fh.write(str(globals.ecut['data'][5,n]) + ' ' + str(globals.ecut['data'][6,n]) + ' ' + str(globals.ecut['data'][7,n]) + ' ' + str(globals.ecut['data'][8,n]) + ' ' + '\n')
+      econv = None
+      fconv = None
       if(counter > 1):
-        if(converged < 1):
-          ecutrho_v = ecutrho + globals.ecut['rho_dec_pw']
-        if(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]) <= econv_threshold and abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]) <= fconv_threshold):
-          converged = converged + 1
-        else:
-          converged = 0
+        econv = round(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]),8)
+        if(abs(globals.ecut['data'][7,n] - globals.ecut['data'][7,n-1]) > econv_threshold or abs(globals.ecut['data'][8,n] - globals.ecut['data'][8,n-1]) > fconv_threshold):
+          notconverged = notconverged + 1       
+        ecutrho_v = ecutrho + globals.ecut['rho_dec_pw']  # BEST IS ALWAYS LAST ECUTRHO (i.e. this ecutrho + the difference)
+          
+      globals.log_fh.write('DEC RHO ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][5,n], 10) + 
+                           std.str_padded(globals.ecut['data'][6,n], 10) + 
+                           std.str_padded(globals.ecut['data'][7,n], 17) + 
+                           std.str_padded(globals.ecut['data'][8,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
 
 # Decrease
       ecutrho = ecutrho - globals.ecut['rho_dec_pw']   
@@ -4297,7 +4807,7 @@ class conv_ecut:
     
     globals.log_fh.write('3. DECREASE ECUTWFC \n')
     
-    converged = 0
+    unconverged = 0
     ecutwfc = ecutwfc_v
     ecutrho = ecutrho_v
 
@@ -4310,7 +4820,7 @@ class conv_ecut:
     
     counter = 0   
     globals.log_fh.write('Data: \n')
-    while((ecutwfc >= globals.ecut['wfc_min_pw'] and converged < 1) or counter < 5):
+    while((ecutwfc >= globals.ecut['wfc_min_pw'] and unconverged < 1) or counter < 5):
       counter = counter + 1
 
 # Get file name
@@ -4328,7 +4838,9 @@ class conv_ecut:
       runfile.append(globals.dirs['ecut'] + '/' + file_name)
       log, files_out, run_list = pwscf_exec.execute(runfile)
 
-      fpo = pwscf_output(files_out[0]['file'])      
+      fpo = pwscf_output(files_out[0]['file'])  
+      cpu, wall = fpo.get_times()
+      globals.set_times(cpu, wall)    
       
       n = globals.ecut['data_len'][2]
       globals.ecut['data_len'][2] = globals.ecut['data_len'][2] + 1
@@ -4338,16 +4850,29 @@ class conv_ecut:
       globals.ecut['data'][12,n] = fpo.get_energy_per_atom()
       globals.ecut['data'][13,n] = fpo.get_force_per_atom()
      
-      globals.log_fh.write(str(globals.ecut['data'][10,n]) + ' ' + str(globals.ecut['data'][11,n]) + ' ' + str(globals.ecut['data'][12,n]) + ' ' + str(globals.ecut['data'][13,n]) + ' ' + '\n')
+#globals.log_fh.write(str(globals.ecut['data'][10,n]) + ' ' + str(globals.ecut['data'][11,n]) + ' ' + str(globals.ecut['data'][12,n]) + ' ' + str(globals.ecut['data'][13,n]) + ' ' + '\n')
 
+      econv = None
+      fconv = None
       if(counter > 1):
-        if(converged < 1):
-          ecutwfc_v = ecutwfc + globals.ecut['wfc_dec_pw']
+        econv = round(abs(globals.ecut['data'][12,n] - globals.ecut['data'][12,n-1]),8)
+        fconv = round(abs(globals.ecut['data'][13,n] - globals.ecut['data'][13,n-1]),8)
         if(abs(globals.ecut['data'][12,n] - globals.ecut['data'][12,n-1]) <= econv_threshold and abs(globals.ecut['data'][13,n] - globals.ecut['data'][13,n-1]) <= fconv_threshold):
-          converged = converged + 1
-        else:
-          converged = 0
+          notconverged = notconverged + 1  
+        ecutwfc_v = ecutwfc + globals.ecut['wfc_dec_pw']  # BEST IS ALWAYS LAST ECUTRHO (i.e. this ecutrho + the difference)  
 
+      globals.log_fh.write('DEC WFC ' + 
+                           std.str_padded(counter, 5) + 
+                           std.str_padded(converged, 5) + 
+                           std.str_padded(globals.ecut['data'][10,n], 10) + 
+                           std.str_padded(globals.ecut['data'][11,n], 10) + 
+                           std.str_padded(globals.ecut['data'][12,n], 17) + 
+                           std.str_padded(globals.ecut['data'][13,n], 17) + 
+                           std.str_padded(econv, 17) + 
+                           std.str_padded(fconv, 17) + 
+                           str(ecutwfc_v) + ' ' +
+                           str(ecutrho_v) + '\n')
+      
 # Increment
       ecutwfc = ecutwfc - globals.ecut['wfc_dec_pw']   
       
@@ -4440,7 +4965,8 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (RY)')
     axs[2, 1].set_ylabel('Force (RY/BOHR)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ry.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ry.svg')
+    plot_output.plot(plt, 'ecut_convergence_ry')
   
 # PLOT CONVERGENCE REL RY
     
@@ -4482,7 +5008,8 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (RY)')
     axs[2, 1].set_ylabel('Force (RY/BOHR)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_adjusted_ry.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'convergence_adjusted_ry.svg')
+    plot_output.plot(plt, 'ecut_convergence_adjusted_ry')
   
 # PLOT CONVERGENCE EV
     
@@ -4524,8 +5051,22 @@ class conv_ecut:
     axs[2, 1].set_xlabel('Ecutwfc (eV)')
     axs[2, 1].set_ylabel('Force (eV/ang)')
 
-    plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ev.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'convergence_ev.svg')
+    plot_output.plot(plt, 'ecut_convergence_ev')
     
+###########################################
+#  CLASS plot_outpu
+###########################################
+class plot_output:
+
+  @staticmethod
+  def plot(plt, file_name):    
+    plt.savefig(globals.dirs['plots_svg'] + '/' + file_name + '.svg', format='svg')
+    plt.savefig(globals.dirs['plots_eps'] + '/' + file_name + '.eps', format='eps')
+  
+    plt.rcParams["figure.figsize"] = [4,3]
+    plt.savefig(globals.dirs['plots_eps_small'] + '/' + file_name + '.eps', format='eps')
+  
 ###########################################
 #  CLASS conv_ecut2
 ###########################################
@@ -4559,6 +5100,8 @@ class conv_ecut2d:
         log, files_out, run_list = pwscf_exec.execute(runfile)
                 
         fpo = pwscf_output(files_out[0]['file'])  
+        cpu, wall = fpo.get_times()
+        globals.set_times(cpu, wall)
         globals.ecut2d['energy_ry'][data_h,data_w] = fpo.get_energy_per_atom()
         globals.ecut2d['force_rybohr'][data_h,data_w] = fpo.get_force_per_atom()   
         globals.ecut2d['energy_ev'][data_h,data_w] = units.convert(globals.pw_units['energy'], 'EV', fpo.get_energy_per_atom())
@@ -4586,15 +5129,92 @@ class conv_ecut2d:
     y = numpy.linspace(globals.ecut2d['rho_min_pw'], globals.ecut2d['rho_max_pw'], data_h)
     
     plt.clf()    
-    plt.contourf(x, y, globals.ecut2d['energy_ry'][0:data_h,0:data_w], 20, cmap='Greys')
+    plt.contourf(x, y, globals.ecut2d['energy_ry'][0:data_h,0:data_w], 64, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_ry.svg')
+    plt.xlabel('Ecutwfc (Ry)')
+    plt.ylabel('Ecutrho')
+    plot_output.plot(plt, 'ecut2d_energy_ry')
 
     plt.clf()
-    plt.contourf(x, y, globals.ecut2d['force_rybohr'][0:data_h,0:data_w], 20, cmap='Greys')
+    plt.contourf(x, y, globals.ecut2d['force_rybohr'][0:data_h,0:data_w], 64, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_rybohr.svg')
-
+    plt.xlabel('Ecutwfc (Ry)')
+    plt.ylabel('Ecutrho')
+    plot_output.plot(plt, 'ecut2d_force_rybohr')
+    
+# RY ADJUSTED COLOUR PLOTS
+    data_e = globals.ecut2d['energy_ry'][0:data_h,0:data_w] - numpy.amin(globals.ecut2d['energy_ry'][0:data_h,0:data_w])
+    plt.clf()    
+    plt.contourf(x, y, data_e[0:data_h,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+    plt.xlabel('Ecutwfc (Ry)')
+    plt.ylabel('Ecutrho')
+    plot_output.plot(plt, 'ecut2d_energy_ry_colour')
+    
+    data_f = globals.ecut2d['force_rybohr'][0:data_h,0:data_w] - numpy.amin(globals.ecut2d['force_rybohr'][0:data_h,0:data_w])
+    plt.clf()    
+    plt.contourf(x, y, data_f[0:data_h,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+    plt.xlabel('Ecutwfc (Ry)')
+    plt.ylabel('Ecutrho')
+    plot_output.plot(plt, 'ecut2d_force_ry_colour')
+    
+# WFC CONVERGENCE GREY + COLOUR
+    x_wfc = conv_ecut2d.half_scale(x)
+    data_e_conv = conv_ecut2d.conv_w(globals.ecut2d['energy_ry'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x_wfc, y, data_e_conv[0:data_h,0:data_w-1], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_wfcconv_ry_grey.svg')
+    plot_output.plot(plt, 'ecut2d_energy_wfcconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x_wfc, y, data_e_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_wfcconv_ry_colour.svg')
+    plot_output.plot(plt, 'ecut2d_energy_wfcconv_ry_colour')
+    
+# RHO CONVERGENCE GREY + COLOUR
+    y_rho = conv_ecut2d.half_scale(y)
+    data_e_conv = conv_ecut2d.conv_h(globals.ecut2d['energy_ry'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x, y_rho, data_e_conv[0:data_h-1,0:data_w], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_rhoconv_ry_grey.svg')
+    plot_output.plot(plt, 'ecut2d_energy_rhoconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x, y_rho, data_e_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_rhoconv_ry_colour.svg')
+    plot_output.plot(plt, 'ecut2d_energy_rhoconv_ry_colour')
+    
+# WFC CONVERGENCE GREY + COLOURW
+    x_wfc = conv_ecut2d.half_scale(x)
+    data_f_conv = conv_ecut2d.conv_w(globals.ecut2d['force_rybohr'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x_wfc, y, data_f_conv[0:data_h,0:data_w-1], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_wfcconv_ry_grey.svg')
+    plot_output.plot(plt, 'ecut2d_force_wfcconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x_wfc, y, data_f_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_wfcconv_ry_colour.svg')
+    plot_output.plot(plt, 'ecut2d_force_wfcconv_ry_colour')
+    
+# RHO CONVERGENCE GREY + COLOUR
+    y_rho = conv_ecut2d.half_scale(y)
+    data_f_conv = conv_ecut2d.conv_h(globals.ecut2d['force_rybohr'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x, y_rho, data_f_conv[0:data_h-1,0:data_w], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_rhoconv_ry_grey.svg')
+    plot_output.plot(plt, 'ecut2d_force_rhoconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x, y_rho, data_f_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_rhoconv_ry_colour.svg')
+    plot_output.plot(plt, 'ecut2d_force_rhoconv_ry_colour')
+    
     a = units.convert(globals.pw_units['energy'], 'EV', globals.ecut2d['wfc_min_pw'])
     b = units.convert(globals.pw_units['energy'], 'EV', globals.ecut2d['wfc_max_pw']) 
     c = units.convert(globals.pw_units['charge_density'], 'ANG-3', globals.ecut2d['rho_min_pw'])
@@ -4605,12 +5225,77 @@ class conv_ecut2d:
     plt.clf()    
     plt.contourf(x, y, globals.ecut2d['energy_ev'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_ev.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_energy_ev.svg')
+    plot_output.plot(plt, 'ecut2d_energy_ev')
 
     plt.clf()
     plt.contourf(x, y, globals.ecut2d['force_evang'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_evang.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'ecut2d_force_evang.svg')
+    plot_output.plot(plt, 'ecut2d_force_evang')
+    
+    plt.clf()    
+    plt.rc('font', family='serif')
+    plt.rc('xtick', labelsize='x-small')
+    plt.rc('ytick', labelsize='x-small')
+    fig, axs = plt.subplots(2,2, figsize=(12,9))
+    fig.tight_layout(pad=5.0)
+    fig.suptitle('Energy and Force Convergence')    
+
+    x_wfc = conv_ecut2d.half_scale(x)
+    data_e_conv = conv_ecut2d.conv_w(globals.ecut2d['energy_ry'][0:data_h,0:data_w], data_h, data_w)    
+    axs[0,0].set_title('WFC Energy Convergence (Ry)')
+    axs[0,0].contourf(x_wfc, y, data_e_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    axs[0,0].colorbar()
+    axs[0,0].set_xlabel('Ecutwfc')
+    axs[0,0].set_ylabel('Ecutrho')
+               
+    y_rho = conv_ecut2d.half_scale(y)
+    data_e_conv = conv_ecut2d.conv_h(globals.ecut2d['energy_ry'][0:data_h,0:data_w], data_h, data_w) 
+    axs[0,1].set_title('RHO Energy Convergence (Ry)')
+    axs[0,1].contourf(x, y_rho, data_e_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    axs[0,1].colorbar()
+    axs[0,1].set_xlabel('Ecutwfc')
+    axs[0,1].set_ylabel('Ecutrho')
+        
+    x_wfc = conv_ecut2d.half_scale(x)
+    data_f_conv = conv_ecut2d.conv_w(globals.ecut2d['force_rybohr'][0:data_h,0:data_w], data_h, data_w)    
+    axs[1,0].set_title('WFC Force Convergence (RyBohr)')
+    axs[1,0].contourf(x_wfc, y, data_f_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    axs[1,0].colorbar()
+    axs[1,0].set_xlabel('Ecutwfc')
+    axs[1,0].set_ylabel('Ecutrho')
+               
+    y_rho = conv_ecut2d.half_scale(y)
+    data_f_conv = conv_ecut2d.conv_h(globals.ecut2d['force_rybohr'][0:data_h,0:data_w], data_h, data_w)  
+    axs[1,1].set_title('RHO Force Convergence (RyBohr)')
+    axs[1,1].contourf(x, y_rho, data_f_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    axs[1,1].colorbar()
+    axs[1,1].set_xlabel('Ecutwfc')
+    axs[1,1].set_ylabel('Ecutrho')
+    
+    plot_output.plot(plt, 'ecut_summary')
+    
+  @staticmethod
+  def conv_w(data_in, h, w):
+    out = numpy.zeros((h, w-1),)
+    for i in range(w-1):
+      out[:,i] = abs(data_in[:,i+1] - data_in[:,i])
+    return out
+    
+  @staticmethod
+  def conv_h(data_in, h, w):
+    out = numpy.zeros((h-1, w),)
+    for i in range(h-1):
+      out[i,:] = abs(data_in[i+1,:] - data_in[i,:])
+    return out
+    
+  @staticmethod
+  def half_scale(arr_in):
+    arr_out = numpy.zeros((len(arr_in) - 1,),)
+    for i in range(len(arr_out)):
+      arr_out[i] = 0.5 * (arr_in[i+1] + arr_in[i])
+    return arr_out
     
 ###########################################
 #  CLASS conv_kpoint
@@ -4658,6 +5343,8 @@ class conv_kpoints:
         log, files_out, run_list = pwscf_exec.execute(runfile)
                 
         fpo = pwscf_output(files_out[0]['file'])  
+        cpu, wall = fpo.get_times()
+        globals.set_times(cpu, wall)
         globals.kconv['energy_ry'][data_h,data_w] = fpo.get_energy_per_atom()
         globals.kconv['force_rybohr'][data_h,data_w] = fpo.get_force_per_atom()   
         globals.kconv['energy_ev'][data_h,data_w] = units.convert(globals.pw_units['energy'], 'EV', fpo.get_energy_per_atom())
@@ -4686,12 +5373,78 @@ class conv_kpoints:
     plt.clf()    
     plt.contourf(x, y, globals.kconv['energy_ry'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ry.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ry.svg')
+    plot_output.plot(plt, 'kpoints_energy_ry')
 
     plt.clf()
     plt.contourf(x, y, globals.kconv['force_rybohr'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_rybohr.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_rybohr.svg')
+    plot_output.plot(plt, 'kpoints_force_rybohr')
+    
+# RY ADJUSTED COLOUR PLOTS
+    data = globals.kconv['energy_ry'][0:data_h,0:data_w] - numpy.amin(globals.kconv['energy_ry'][0:data_h,0:data_w])
+    plt.clf()    
+    plt.contourf(x, y, data[0:data_h,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ry_colour.svg')
+    plot_output.plot(plt, 'kpoints_energy_ry_colour')
+    data = globals.kconv['force_rybohr'][0:data_h,0:data_w] - numpy.amin(globals.kconv['force_rybohr'][0:data_h,0:data_w])
+    plt.clf()    
+    plt.contourf(x, y, data[0:data_h,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_rybohr_colour.svg')
+    plot_output.plot(plt, 'kpoints_force_rybohr_colour')
+
+# KPOINTS CONVERGENCE GREY + COLOUR
+    x_smearing = conv_kpoints.half_scale(x)
+    data_e_conv = conv_kpoints.conv_w(globals.kconv['energy_ry'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x_smearing, y, data_e_conv[0:data_h,0:data_w-1], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_kpointconv_ry_grey.svg')
+    plot_output.plot(plt, 'kpoints_energy_kpointconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x_smearing, y, data_e_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_kpointconv_ry_colour.svg')
+    plot_output.plot(plt, 'kpoints_energy_kpointconv_ry_colour')
+    data_f_conv = conv_kpoints.conv_w(globals.kconv['force_rybohr'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x_smearing, y, data_f_conv[0:data_h,0:data_w-1], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_kpointconv_ry_grey.svg')
+    plot_output.plot(plt, 'kpoints_force_kpointconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x_smearing, y, data_f_conv[0:data_h,0:data_w-1], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_kpointconv_ry_colour.svg')
+    plot_output.plot(plt, 'kpoints_force_kpointconv_ry_colour')
+
+# SMEARING CONVERGENCE GREY + COLOUR
+    y_smearing = conv_kpoints.half_scale(y)
+    data_e_conv = conv_kpoints.conv_h(globals.kconv['energy_ry'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x, y_smearing, data_e_conv[0:data_h-1,0:data_w], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_smearingconv_ry_grey.svg')
+    plot_output.plot(plt, 'kpoints_energy_smearingconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x, y_smearing, data_e_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_smearingconv_ry_colour.svg')
+    plot_output.plot(plt, 'kpoints_energy_smearingconv_ry_colour')
+    data_f_conv = conv_kpoints.conv_h(globals.kconv['force_rybohr'][0:data_h,0:data_w], data_h, data_w)
+    plt.clf()    
+    plt.contourf(x, y_smearing, data_f_conv[0:data_h-1,0:data_w], 64, cmap='Greys')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_smearingconv_ry_grey.svg')
+    plot_output.plot(plt, 'kpoints_force_smearingconv_ry_grey')
+    plt.clf()    
+    plt.contourf(x, y_smearing, data_f_conv[0:data_h-1,0:data_w], 128, cmap='viridis')
+    plt.colorbar()
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_smearingconv_ry_colour.svg')
+    plot_output.plot(plt, 'kpoints_force_smearingconv_ry_colour')
 
     x = numpy.linspace(globals.kconv['k_min'], globals.kconv['k_max'], data_w)
     for i in range(len(y)):
@@ -4700,12 +5453,35 @@ class conv_kpoints:
     plt.clf()    
     plt.contourf(x, y, globals.kconv['energy_ev'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ev.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_energy_ev.svg')
+    plot_output.plot(plt, 'kpoints_energy_ev')
 
     plt.clf()
     plt.contourf(x, y, globals.kconv['force_evang'][0:data_h,0:data_w], 20, cmap='Greys')
     plt.colorbar()
-    plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_evang.svg')
+#plt.savefig(globals.dirs['plots'] + '/' + 'kpoints_force_evang.svg')
+    plot_output.plot(plt, 'kpoints_force_evang')
+
+  @staticmethod
+  def conv_w(data_in, h, w):
+    out = numpy.zeros((h, w-1),)
+    for i in range(w-1):
+      out[:,i] = abs(data_in[:,i+1] - data_in[:,i])
+    return out
+    
+  @staticmethod
+  def conv_h(data_in, h, w):
+    out = numpy.zeros((h-1, w),)
+    for i in range(h-1):
+      out[i,:] = abs(data_in[i+1,:] - data_in[i,:])
+    return out
+    
+  @staticmethod
+  def half_scale(arr_in):
+    arr_out = numpy.zeros((len(arr_in) - 1,),)
+    for i in range(len(arr_out)):
+      arr_out[i] = 0.5 * (arr_in[i+1] + arr_in[i])
+    return arr_out
 
 ###########################################
 ###########################################

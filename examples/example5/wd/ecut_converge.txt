@@ -1,0 +1,2 @@
+Ecutwfc: 26.0 
+Ecutrho: 85.0 

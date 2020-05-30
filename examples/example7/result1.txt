@@ -1,0 +1,5 @@
+QE Converge
+3
+['/rds/homes/b/bxp912/apps/python/qeconverge.py', 'input.in', 'plot']
+Running Plot
+wd/csv/ecut2d_energy_ry.csv

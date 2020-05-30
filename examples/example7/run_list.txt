@@ -1,0 +1,12 @@
+File Name:                      file_000276
+Path:                           wd/kpoints
+File In:                        wd/kpoints/file_000276.in
+File Out:                       wd/kpoints/file_000276.out
+Hash:                           370852c673caa266c7149584fd95c36c14c1c507f85e7aace218ee1fce7b11aa3300e5ca49ae668437766b815d304427474a98bdc893bf1a37aad910e260ab10
+Use Cache?:                     True
+Cache Used:                     True
+Cache In:                       /rds/homes/b/bxp912/pwscf_cache/370852c673caa266c7149584fd95c36c14c1c507f85e7aace218ee1fce7b11aa3300e5ca49ae668437766b815d304427474a98bdc893bf1a37aad910e260ab10.in
+Cache Out:                      /rds/homes/b/bxp912/pwscf_cache/370852c673caa266c7149584fd95c36c14c1c507f85e7aace218ee1fce7b11aa3300e5ca49ae668437766b815d304427474a98bdc893bf1a37aad910e260ab10.out
+CMD:                            mpirun -n 20 /rds/homes/b/bxp912/apps/qe-6.3/bin/pw.x -i wd/kpoints/file_000276.in > wd/kpoints/file_000276.out
+
+

@@ -1,12 +1,12 @@
-File Name:                      file_000122
-Path:                           wd/kpoints
-File In:                        wd/kpoints/file_000122.in
-File Out:                       wd/kpoints/file_000122.out
-Hash:                           e7bec5317c847f6c1e5abad8f8fde084d3a0372b9d3e0e9ffcfdd05ea5479afd8fc250b3f97ce270d1c6af70ec7e4d63b244cc5be3b974f3a18bd86066f0d7e9
-Use Cache?:                     True
-Cache Used:                     True
-Cache In:                       /opt/pwscf_cache/e7bec5317c847f6c1e5abad8f8fde084d3a0372b9d3e0e9ffcfdd05ea5479afd8fc250b3f97ce270d1c6af70ec7e4d63b244cc5be3b974f3a18bd86066f0d7e9.in
-Cache Out:                      /opt/pwscf_cache/e7bec5317c847f6c1e5abad8f8fde084d3a0372b9d3e0e9ffcfdd05ea5479afd8fc250b3f97ce270d1c6af70ec7e4d63b244cc5be3b974f3a18bd86066f0d7e9.out
-CMD:                            mpirun -n 4 /opt/qe/bin/pw.x -i wd/kpoints/file_000122.in > wd/kpoints/file_000122.out
+File Name:                      file_000001
+Path:                           wd/ecut
+File In:                        wd/ecut/file_000001.in
+File Out:                       wd/ecut/file_000001.out
+Hash:                           daf64fe80a43a2751cf79fbd3200239e4eeba57fb7b02e672d4cb0441615d31b2897cc34adfce4062cd18a09ff9a5d9d6cd08b2df6f7e53feecdb74a10130c13
+Use Cache?:                     False
+Cache Used:                     False
+Cache In:                       /opt/pwscf_cache/daf64fe80a43a2751cf79fbd3200239e4eeba57fb7b02e672d4cb0441615d31b2897cc34adfce4062cd18a09ff9a5d9d6cd08b2df6f7e53feecdb74a10130c13.in
+Cache Out:                      /opt/pwscf_cache/daf64fe80a43a2751cf79fbd3200239e4eeba57fb7b02e672d4cb0441615d31b2897cc34adfce4062cd18a09ff9a5d9d6cd08b2df6f7e53feecdb74a10130c13.out
+CMD:                            mpirun -n 4 /opt/qe/bin/pw.x -i wd/ecut/file_000001.in > wd/ecut/file_000001.out
 
 

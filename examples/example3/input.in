@@ -13,6 +13,6 @@ configecut type=fcc size=2 alat=4.04 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 r
 
 ecut2d run=True wfc1=25 wfc2=100 wcf3=5 rho1=100 rho2=300 rho3=20
 
-kconv run=True k_min=3 k_inc=2 k_max=7 k_type=automatic smearing=0.001,0.002,0.005,0.007,0.008,0.01,0.02,0.03,0.04,0.05 smearing_units=RY 
+kconv run=True k_min=3 k_inc=1 k_max=7 k_type=automatic smearing=0.001,0.002,0.005,0.007,0.008,0.01,0.02,0.03,0.04,0.05 smearing_units=RY 
 configkpoint type=fcc size=2 alat=4.04 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 rand_variance=0.01 rand_seed=0 
 

@@ -17,6 +17,7 @@ import hashlib
 import random
 from rand_dist import rand_dist
 from pwscf_output import pwscf_output
+from atom_config import atom_config
 
 ############################
 #  pwscf_input
@@ -424,7 +425,7 @@ class pwscf_input:
     for key in sorted(self.electrons.keys()):
       value = self.electrons[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
     # IONS
@@ -432,7 +433,7 @@ class pwscf_input:
     for key in sorted(self.ions.keys()):
       value = self.ions[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
     # CELL
@@ -440,14 +441,14 @@ class pwscf_input:
     for key in sorted(self.cell.keys()):
       value = self.cell[key]
       if(value != None):
-        file += key + " = " + value + ", \n"      
+        file += str(key) + " = " + str(value) + ", \n"      
     file += "/ \n"
 
     # ATOMIC_SPECIES
     file += "ATOMIC_SPECIES \n"
     for species in self.atomic_species:      
       for field in species:
-        file += field + " "
+        file += str(field) + " "
       file += "\n"
 
     # ATOMIC_POSITIONS
@@ -455,23 +456,33 @@ class pwscf_input:
     for position in self.atomic_positions:      
       if(header == 0):
         file += "ATOMIC_POSITIONS "
-        file += position + "\n"
+        file += str(position) + "\n"
         header = 1
       #elif(header == 1):
       #  file += position[1] + "\n"
       #  header = 2
       elif(header == 1):  
         for field in position:
-          file += field + "   "
+          file += str(field) + "   "
         file += "\n"
 
     # K_POINTS
-    file += "K_POINTS " + self.k_points[0]
+    kpoints_type = self.k_points[0]
+    kpoints_mesh = ''
+    if(len(self.k_points) == 2):
+      if(type(self.k_points[1]) == list):
+        for k in self.k_points[1]:
+          kpoints_mesh += str(k) + ' '
+      else:
+        kpoints_mesh += self.k_points[1]
+    elif(len(self.k_points) == 7):
+      for i in range(1,len(self.k_points)):
+        kpoints_mesh += self.k_points[i] + ' '
+    
+    file += "K_POINTS " + kpoints_type
     file += "\n"
-    for i in range(1,len(self.k_points)):
-      for point in self.k_points[i]:
-        file += point + " "
-      file += "\n"
+    file += kpoints_mesh + " "
+    file += "\n"   
         
 
     # K_POINTS
@@ -479,7 +490,7 @@ class pwscf_input:
     file += "\n"
     for i in range(1,len(self.cell_parameters)):
       for point in self.cell_parameters[i]:
-        file += point + " "
+        file += str(point) + " "
       file += "\n"
       
     # Process
@@ -581,7 +592,7 @@ class pwscf_input:
     if(scratch_dir != None):
       self.scratch_dir = scratch_dir
     if(pp_dir != None):
-      self.scratch_dir = pp_dir
+      self.pp_dir = pp_dir
    
     self.control['outdir'] = '"' + self.scratch_dir + '"'
     self.control['pseudo_dir'] = '"' + self.pp_dir + '"'
@@ -677,6 +688,54 @@ class pwscf_input:
   def set_cp_zeros(self):
     self.set_cell_parameters([[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]])
     
+  
+  def set_seed(self, seed=0):
+    random.seed(seed)
+    self.rand.setSeed(seed)
+    self.rand_seed_set = 1
+
+
+  # K-Points
+  ####################
+  def set_k_points(self, k_points_type, points_list):
+    self.k_points = []
+    self.k_points.append(k_points_type)
+    self.k_points.append(points_list)  
+    
+    
+  # Atom Positions
+  ####################
+  def set_atomic_positions(self, atoms, c_type='crystal'):    
+    self.system['nat'] = str(len(atoms))
+    self.atomic_positions = []
+    self.atomic_positions.append(c_type)
+    for atom in atoms:
+      self.atomic_positions.append([str(atom[0]),str(float(atom[1])),str(float(atom[2])),str(float(atom[3]))])
+    
+    
+  
+    
+  def set_config(self, s):
+  
+    if(s['labels'] == None):
+      s['labels'] = self.get_atom_labels()      
+    s['alat_in'] = float(self.system['celldm'][0])
+    
+    a = atom_config.make(s)     
+    
+    self.atomic_positions = []
+    self.atomic_positions.append('crystal')
+    self.system['nat'] = str(len(a['atoms']))
+    for atom in a['atoms']:
+      self.atomic_positions.append([str(atom[0]),str(float(atom[1])),str(float(atom[2])),str(float(atom[3]))])
+    
+    self.system['celldm'][0] = str(float(a['size_x']) * float(self.system['celldm'][0]) * a['alat_change'])
+    
+    # Make
+    self.make()    
+    
+    return a
+    
     
   def nomalise_cell_parameters(self):
     self.system['celldm'][0] = str(float(self.system['celldm'][0]) * float(self.cell_parameters[1][0]))
@@ -686,13 +745,6 @@ class pwscf_input:
         self.cell_parameters[i][j] = str(float(self.cell_parameters[i][j]) / d)
         
 
-
-  # K-Points
-  ####################
-  def set_k_points(self, k_points_type, points_list):
-    self.k_points = []
-    self.k_points.append(k_points_type)
-    self.k_points.append(points_list)
     
     
 ############################
@@ -717,7 +769,7 @@ class pwscf_input:
 
   def load_config(self, type="FCC", size=1, alat=None, cp=None): 
     type = type.upper()
-    result = {"CrystalAtoms": 0, "TotalAtoms": 0}
+    result = {"CrystalAtoms": 0, "TotalAtoms": 0}    
     
     # SC
     if(type == "SC"):
@@ -736,7 +788,8 @@ class pwscf_input:
       atoms, c_atoms, n_atoms = pwscf_standard.bcc(labels,size) 
       self.atomic_positions = atoms
       self.system['nat'] = str(len(self.atomic_positions) - 1)
-    
+      
+      
     # FCC
     if(type == "FCC"):
       labels = []
@@ -779,6 +832,9 @@ class pwscf_input:
     # Return
     return c_atoms, n_atoms
     
+    
+    
+    
   def load_custom_config(self, coords, atoms=None):  
     atom_count = len(coords)
     self.system['nat'] = str(atom_count)   
@@ -817,8 +873,32 @@ class pwscf_input:
       self.atomic_positions[n][1] = str(float(self.atomic_positions[n][1]) + r[0])
       self.atomic_positions[n][2] = str(float(self.atomic_positions[n][2]) + r[1])
       self.atomic_positions[n][3] = str(float(self.atomic_positions[n][3]) + r[2])
+      
+  def rand_vary_positions(self, vmin=0.0, vmax=0.0):
+    if(not (vmin == 0.0 and vmax == 0.0)):  
+      c = numpy.zeros((3,3))
+      for i in range(1,4):
+        for j in range(0,3): 
+          c[i-1,j] = self.cell_parameters[i][j]
+      c_inv = numpy.linalg.inv(c)
 
+      for n in range(1, len(self.atomic_positions)):
+        r = numpy.zeros((3))
+        r[0] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+        r[1] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+        r[2] = (vmin + self.rand.rng() * (vmax - vmin)) * (1.0 / float(self.system['celldm'][0]))
+    
+        r = numpy.matmul(c_inv, r)
+        self.atomic_positions[n][1] = str(float(self.atomic_positions[n][1]) + r[0])
+        self.atomic_positions[n][2] = str(float(self.atomic_positions[n][2]) + r[1])
+        self.atomic_positions[n][3] = str(float(self.atomic_positions[n][3]) + r[2])   
 
+  def rand_vary_alat(self, vmin=0.0, vmax=0.0):
+    if(not (vmin == 0.0 and vmax == 0.0)):
+      alat = self.get_alat()
+      f = 1.0 + vmin + random.uniform(0.0,1.0) * (vmax - vmin)
+      alat = round(f * float(alat),8)
+      self.set_alat(alat)
 
 ############################
 #  Get
@@ -856,6 +936,33 @@ class pwscf_input:
 
   def get_alat(self):
     return self.system['celldm'][0]
+
+  def get_ecutwfc(self):
+    return self.system['ecutwfc']
+  def get_ecutrho(self):
+    return self.system['ecutrho']
+  def get_degauss(self):
+    return self.system['degauss']
+  def get_kpoints(self):
+    return str(self.k_points[0]) + ' ' + str(self.k_points[1])
+
+
+  def get_atomic_species(self):
+    return self.atomic_species
+    
+    
+  def get_atom_labels(self):
+    l = []
+    for li in self.atomic_species:
+      l.append(li[0])
+    return l
+    
+  def get_random_atom_label(self):
+    l = []
+    for li in self.atomic_species:
+      l.append(li[0])
+    r = random.randint(0, len(l)-1) 
+    return l[r]
 
 
 #################################
@@ -1120,9 +1227,9 @@ class pwscf_input:
        if(isinstance(value, (list,))):
          for i in range(len(value)):
            if(value[i] != None):
-             output += key + "(" + str(i+1) + ") = " + value[i] + ", \n"                
+             output += str(key) + "(" + str(i+1) + ") = " + str(value[i]) + ", \n"                
        else:
-         output += key + " = " + value + ", \n"   
+         output += str(key) + " = " + str(value) + ", \n"   
     return output    
 
   @staticmethod

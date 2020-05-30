@@ -1,0 +1,18 @@
+#
+#
+#
+#
+
+
+template file="pdfcc.in"
+
+converge force=1.0E-5 force_units=RY/BOHR energy=1.0E-6 energy_units=ry
+
+ecutconv run=True wfc_min=70 wfc_inc=5 wfc_dec=1 wfc_max=200 rho_dec=5 wr_min_ratio=2.0 kpoints_type="automatic" kpoints_val="3 3 3 1 1 1"
+configecut type=fcc size=1 alat=3.89 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 rand_variance=0.01 rand_seed=0 
+
+ecut2d run=True wfc1=70 wfc2=140 wcf3=10 rho1=2.0 rho2=4.0 rho3=0.25
+
+kconv run=True k_min=3 k_inc=1 k_max=11 k_type=automatic smearing=0.01,0.02,0.03,0.04,0.05 smearing_units=RY 
+configkpoint type=fcc size=1 alat=3.89 alat_units=ang cp=1.0,1.0,1.0,0.0,0.0,0.0 rand_variance=0.01 rand_seed=0 
+

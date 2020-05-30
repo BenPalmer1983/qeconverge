@@ -1,0 +1,59 @@
+! Edited 15:18   19/3/2020
+&CONTROL 
+calculation = "scf", 
+disk_io = 'low', 
+etot_conv_thr = 1.0E-4, 
+forc_conv_thr = 1.0D-3, 
+nstep = 40, 
+outdir = "/opt/scratch", 
+prefix = "fe_scf_fcc_2", 
+pseudo_dir = "/opt/pp", 
+restart_mode = 'from_scratch', 
+tprnfor = .true., 
+tstress = .true., 
+/ 
+&SYSTEM 
+celldm(1) = 9.5256, 
+degauss = 0.02, 
+ecutrho = 180.0, 
+ecutwfc = 60.0, 
+ibrav = 0, 
+nat = 8, 
+nspin = 1, 
+ntyp = 1, 
+occupations = 'smearing', 
+smearing = 'mv', 
+starting_magnetization(1) = 0, 
+/ 
+&ELECTRONS 
+conv_thr = 1.0D-6, 
+diagonalization = 'david', 
+mixing_beta = 1.0000000E-01, 
+mixing_mode = 'TF', 
+mixing_ndim = 10, 
+/ 
+&IONS 
+ion_dynamics = 'bfgs', 
+/ 
+&CELL 
+cell_dynamics = 'bfgs', 
+cell_factor = 2.0, 
+press = 0.0, 
+/ 
+ATOMIC_SPECIES 
+Al 26.982 Al.pbe-nl-kjpaw_psl.1.0.0.UPF 
+ATOMIC_POSITIONS crystal
+Al   -5.23882120539e-05   1.52441227987e-05   0.000109071162468   
+Al   0.50012761086   0.499695428123   0.000112736232874   
+Al   0.499851119863   4.8886278915e-05   0.500473721893   
+Al   -3.20686231929e-05   0.50035062542   0.500294487176   
+Al   0.250410099732   0.250404192106   0.249809199601   
+Al   0.750191456457   0.749731599268   0.250005749052   
+Al   0.250044546247   0.750246700862   0.749820491872   
+Al   0.750088044054   0.250182175995   0.750336849185   
+K_POINTS automatic
+3 3 3 1 1 1  
+CELL_PARAMETERS alat
+1.0 0.0 0.0 
+0.0 1.0 0.0 
+0.0 0.0 1.0

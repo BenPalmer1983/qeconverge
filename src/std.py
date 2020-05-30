@@ -1,6 +1,7 @@
 
 import re
 import os
+import numpy
 
 
 class std:
@@ -304,6 +305,36 @@ class std:
           data.append(line.split(","))  
     return data
     
+    
+  @staticmethod
+  def csv_to_array(filename, sep=","):
+    out = None
+    if(os.path.isfile(filename)):
+      data = []
+      # Read from file into memory
+      fh = open(filename, 'r')
+      file_data = ""
+      for line in fh:
+        file_data = file_data + line
+      fh.close()
+      # Remove comments
+      file_data = std.remove_comments_data(file_data)
+      # Read Data
+      lines = file_data.split("\n")
+      for line in lines:
+        line = line.strip()
+        if(line != ""):
+          data.append(line.split(","))  
+      l = len(data)
+      w = len(data[0])
+      
+      out = numpy.zeros((l, w,),)
+      for ln in range(l):
+        for wn in range(w):
+          out[ln, wn] = float(data[ln][wn].strip())
+        
+    return out
+    
   @staticmethod
   def write_csv(filename, arr):  
     fh = open(filename, 'w')
@@ -337,4 +368,9 @@ class std:
       out = out + " "      
     return out[0:pad]
     
-  
+  @staticmethod
+  def str_padded(inp, pad=16):
+    out = str(inp)  
+    while(len(out)<pad):
+      out = out + " "      
+    return out[0:pad]

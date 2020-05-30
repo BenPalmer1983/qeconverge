@@ -1,0 +1,12 @@
+File Name:                      file_000071
+Path:                           wd/ecut
+File In:                        wd/ecut/file_000071.in
+File Out:                       wd/ecut/file_000071.out
+Hash:                           e5bca87f85de5f5609708856cb3049a02de0773dc81c1a7f727ab407ff22d04fe47b336d0aff3fb5d1aaea1f486676dcf5fa68002f7082d4b540ddfd56a30780
+Use Cache?:                     True
+Cache Used:                     True
+Cache In:                       /opt/pwscf_cache/e5bca87f85de5f5609708856cb3049a02de0773dc81c1a7f727ab407ff22d04fe47b336d0aff3fb5d1aaea1f486676dcf5fa68002f7082d4b540ddfd56a30780.in
+Cache Out:                      /opt/pwscf_cache/e5bca87f85de5f5609708856cb3049a02de0773dc81c1a7f727ab407ff22d04fe47b336d0aff3fb5d1aaea1f486676dcf5fa68002f7082d4b540ddfd56a30780.out
+CMD:                            mpirun -n 4 /opt/qe/bin/pw.x -i wd/ecut/file_000071.in > wd/ecut/file_000071.out
+
+
