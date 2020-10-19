@@ -43,6 +43,8 @@ class conv_ecut2d:
         ecutfile.set_ecutwfc(ecutwfc)
         ecutfile.set_ecutrho(ecutrho)
         ecutfile.save(file_name, globals.dirs['ecut'])  
+        
+                
                   
         runfile = []
         runfile.append(globals.dirs['ecut'] + '/' + file_name)

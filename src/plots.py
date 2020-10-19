@@ -127,6 +127,7 @@ class plots:
       for n in range(size):
         x = plots.d['subplots'][n]['x']
         y = plots.d['subplots'][n]['y']
+        Z = plots.d['subplots'][n]['Z']
 
         if(len(Z) != len(Z[0,:])):
           x_new, y_new, Z_new = plots.square_data(x, y, Z)

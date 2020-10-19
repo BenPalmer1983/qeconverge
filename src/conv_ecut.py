@@ -36,9 +36,8 @@ class conv_ecut:
          'size_y': globals.ecut['size'],
          'size_z': globals.ecut['size'],
         }       
-    ef.set_alat(globals.ecut['alat_expanded_pw'])
+    ef.set_alat(globals.ecut['alat_pw'])
     ef.set_config(s)
-    
     
     ef.set_cp_arr(globals.ecut['cp'])
     ef.set_k_points(globals.ecut['kpoints_type'], globals.ecut['kpoints_val'])
